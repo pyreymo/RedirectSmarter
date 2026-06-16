@@ -1,105 +1,71 @@
-﻿using System;
+using System;
 using System.Numerics;
 using Dalamud.Game.ClientState.Objects.Types;
 using Dalamud.Hooking;
 using Dalamud.Plugin.Services;
 using FFXIVClientStructs.FFXIV.Client.Game;
-using FFXIVClientStructs.FFXIV.Client.UI.Misc;
+using LuminaAction = Lumina.Excel.Sheets.Action;
 
 namespace RedirectSmarter
 {
     internal class GameHooks : IDisposable
     {
-        private Configuration Configuration { get; } = null!;
-        private Actions Actions { get; } = null!;
-        private static ITargetManager TargetManager => Services.TargetManager;
+        private const uint BarOrigin = 0;
+        private const uint QueueOrigin = 1;
+        private const uint MacroOrigin = 2;
+
+        private readonly Configuration configuration;
+        private readonly ActionCatalog actionCatalog;
+        private readonly TargetResolver targetResolver = new();
         private static IToastGui ToastGui => Services.ToastGui;
 
         private unsafe delegate bool TryActionDelegate(
-            IntPtr tp,
-            ActionType t,
-            uint id,
-            ulong target,
+            IntPtr actionManager,
+            ActionType actionType,
+            uint actionId,
+            ulong targetId,
             uint param,
             uint origin,
             uint unk,
-            Vector3* l
+            Vector3* location
         );
-        private readonly Hook<TryActionDelegate> UseActionHook = null!;
 
-        public GameHooks(Configuration config, Actions actions)
+        private readonly Hook<TryActionDelegate> useActionHook;
+
+        public GameHooks(Configuration configuration, ActionCatalog actions)
         {
-            Configuration = config;
-            Actions = actions;
+            this.configuration = configuration;
+            actionCatalog = actions;
 
             unsafe
             {
-                UseActionHook = Services.InteropProvider.HookFromAddress<TryActionDelegate>(
+                useActionHook = Services.InteropProvider.HookFromAddress<TryActionDelegate>(
                     (IntPtr)ActionManager.MemberFunctionPointers.UseAction,
                     UseActionCallback
                 );
             }
 
-            UseActionHook.Enable();
-        }
-
-        private unsafe IGameObject? ResolvePlaceholder(string ph)
-        {
-            try
-            {
-                var pm = PronounModule.Instance();
-                var p = (IntPtr)pm->ResolvePlaceholder(ph, 0, 0);
-                return Services.ObjectTable.CreateObjectReference(p);
-            }
-            catch (Exception ex)
-            {
-                Services.PluginLog.Error($"Unable to resolve placeholder ({ph}): {ex.Message}");
-                return null;
-            }
-        }
-
-        public unsafe IGameObject? ResolveTarget(string target)
-        {
-            return target switch
-            {
-                RedirectTargets.Self => Services.ObjectTable.LocalPlayer,
-                RedirectTargets.Target => TargetManager.Target,
-                RedirectTargets.Focus => TargetManager.FocusTarget,
-                RedirectTargets.TargetOfTarget => TargetManager.Target is { }
-                    ? TargetManager.Target.TargetObject
-                    : null,
-                RedirectTargets.SoftTarget => TargetManager.SoftTarget,
-                RedirectTargets.Chocobo => ResolvePlaceholder("<b>"),
-                RedirectTargets.Party2 => ResolvePlaceholder(RedirectTargets.Party2),
-                RedirectTargets.Party3 => ResolvePlaceholder(RedirectTargets.Party3),
-                RedirectTargets.Party4 => ResolvePlaceholder(RedirectTargets.Party4),
-                RedirectTargets.Party5 => ResolvePlaceholder(RedirectTargets.Party5),
-                RedirectTargets.Party6 => ResolvePlaceholder(RedirectTargets.Party6),
-                RedirectTargets.Party7 => ResolvePlaceholder(RedirectTargets.Party7),
-                RedirectTargets.Party8 => ResolvePlaceholder(RedirectTargets.Party8),
-                _ => null,
-            };
+            useActionHook.Enable();
         }
 
         private unsafe bool UseActionCallback(
-            IntPtr actManager,
-            ActionType type,
-            uint id,
-            ulong target,
+            IntPtr actionManager,
+            ActionType actionType,
+            uint actionId,
+            ulong targetId,
             uint param,
             uint origin,
             uint unk,
             Vector3* location
         )
         {
-            // This is NOT the same classification as the action's ActionCategory
-            if (type != ActionType.Action)
+            if (actionType != ActionType.Action)
             {
-                return UseActionHook.Original(
-                    actManager,
-                    type,
-                    id,
-                    target,
+                return ContinueOriginal(
+                    actionManager,
+                    actionType,
+                    actionId,
+                    targetId,
                     param,
                     origin,
                     unk,
@@ -107,16 +73,13 @@ namespace RedirectSmarter
                 );
             }
 
-            // The action row for the originating ID
-            var ogRow = Actions.GetRow(id);
-
-            if (ogRow.IsPvP)
+            if (!actionCatalog.IsReady)
             {
-                return UseActionHook.Original(
-                    actManager,
-                    type,
-                    id,
-                    target,
+                return ContinueOriginal(
+                    actionManager,
+                    actionType,
+                    actionId,
+                    targetId,
                     param,
                     origin,
                     unk,
@@ -124,29 +87,36 @@ namespace RedirectSmarter
                 );
             }
 
-            // Macro queueing
-            // Known origins : 0 - bar, 1 - queue, 2 - macro
-            origin = origin == 2 && Configuration.EnableMacroQueueing ? 0 : origin;
+            var requestedAction = actionCatalog.GetRow(actionId);
+            if (requestedAction.IsPvP)
+            {
+                return ContinueOriginal(
+                    actionManager,
+                    actionType,
+                    actionId,
+                    targetId,
+                    param,
+                    origin,
+                    unk,
+                    location
+                );
+            }
 
-            // Actions placed on bars try to use their base action, so we need to get the upgraded version
-            var adjustedId = ActionManager.MemberFunctionPointers.GetAdjustedActionId(
-                (ActionManager*)actManager,
-                id
+            origin = NormalizeOrigin(origin);
+
+            var adjustedActionId = ActionManager.MemberFunctionPointers.GetAdjustedActionId(
+                (ActionManager*)actionManager,
+                actionId
             );
+            var adjustedAction = actionCatalog.GetRow(adjustedActionId);
 
-            // The action id to match against what's stored in the user config
-            var configurationId = ogRow.RowId;
-
-            // The actual action that will be used
-            var adjustedRow = Actions.GetRow(adjustedId);
-
-            if (!adjustedRow.HasOptionalTargeting())
+            if (!ShouldRedirect(adjustedAction, origin))
             {
-                return UseActionHook.Original(
-                    actManager,
-                    type,
-                    id,
-                    target,
+                return ContinueOriginal(
+                    actionManager,
+                    actionType,
+                    actionId,
+                    targetId,
                     param,
                     origin,
                     unk,
@@ -154,85 +124,160 @@ namespace RedirectSmarter
                 );
             }
 
-            // Retain queued actions calculated target
-            if (origin == 1)
-            {
-                return UseActionHook.Original(
-                    actManager,
-                    type,
-                    id,
-                    target,
+            var configurationId = GetConfigurationId(requestedAction, adjustedAction);
+            if (
+                configuration.Redirections.TryGetValue(configurationId, out var redirection)
+                && TryUseConfiguredTarget(
+                    actionManager,
+                    actionType,
+                    actionId,
+                    targetId,
                     param,
                     origin,
                     unk,
-                    location
-                );
+                    location,
+                    adjustedAction,
+                    redirection,
+                    out var result
+                )
+            )
+            {
+                return result;
             }
 
-            // Only actions where "IsPlayerAction" is true are allowed into the config
-            if (adjustedRow.IsPlayerAction)
-            {
-                configurationId = adjustedRow!.RowId;
-            }
+            return ContinueOriginal(
+                actionManager,
+                actionType,
+                actionId,
+                targetId,
+                param,
+                origin,
+                unk,
+                location
+            );
+        }
 
-            if (Configuration.Redirections.TryGetValue(configurationId, out Redirection? value))
+        private uint NormalizeOrigin(uint origin)
+        {
+            return origin == MacroOrigin && configuration.EnableMacroQueueing ? BarOrigin : origin;
+        }
+
+        private static bool ShouldRedirect(LuminaAction adjustedAction, uint origin)
+        {
+            return origin != QueueOrigin && adjustedAction.HasConfigurableTarget();
+        }
+
+        private static uint GetConfigurationId(
+            LuminaAction requestedAction,
+            LuminaAction adjustedAction
+        )
+        {
+            return adjustedAction.IsPlayerAction ? adjustedAction.RowId : requestedAction.RowId;
+        }
+
+        private unsafe bool TryUseConfiguredTarget(
+            IntPtr actionManager,
+            ActionType actionType,
+            uint actionId,
+            ulong originalTargetId,
+            uint param,
+            uint origin,
+            uint unk,
+            Vector3* location,
+            LuminaAction adjustedAction,
+            Redirection redirection,
+            out bool result
+        )
+        {
+            foreach (var targetName in redirection.Priority)
             {
-                foreach (var t in value.Priority)
+                var resolvedTarget = targetResolver.Resolve(targetName);
+                if (resolvedTarget is null)
                 {
-                    IGameObject? nt = ResolveTarget(t);
-                    if (nt is not null)
-                    {
-                        bool rangeOk = adjustedRow.TargetInRangeAndLOS(nt, out var err);
-                        bool typeOk = adjustedRow.TargetTypeValid(nt);
-                        if (rangeOk && typeOk)
-                        {
-                            return UseActionHook.Original(
-                                actManager,
-                                type,
-                                id,
-                                nt.GameObjectId,
-                                param,
-                                origin,
-                                unk,
-                                location
-                            );
-                        }
-                        else if (!Configuration.IgnoreErrors)
-                        {
-                            switch (err)
-                            {
-                                case 566:
-                                    ToastGui.ShowError("Target not in line of sight.");
-                                    break;
-                                case 562:
-                                    ToastGui.ShowError("Target is not in range.");
-                                    break;
-                                default:
-                                    ToastGui.ShowError("Invalid target.");
-                                    break;
-                            }
-                            return false;
-                        }
-                    }
+                    continue;
                 }
 
-                return UseActionHook.Original(
-                    actManager,
-                    type,
-                    id,
-                    target,
-                    param,
-                    origin,
-                    unk,
-                    location
-                );
+                if (IsUsableTarget(adjustedAction, resolvedTarget, out var error))
+                {
+                    result = ContinueOriginal(
+                        actionManager,
+                        actionType,
+                        actionId,
+                        resolvedTarget.GameObjectId,
+                        param,
+                        origin,
+                        unk,
+                        location
+                    );
+                    return true;
+                }
+
+                if (!configuration.IgnoreErrors)
+                {
+                    ShowTargetError(error);
+                    result = false;
+                    return true;
+                }
             }
 
-            return UseActionHook.Original(
-                actManager,
-                type,
-                id,
-                target,
+            result = ContinueOriginal(
+                actionManager,
+                actionType,
+                actionId,
+                originalTargetId,
+                param,
+                origin,
+                unk,
+                location
+            );
+            return true;
+        }
+
+        private static bool IsUsableTarget(
+            LuminaAction action,
+            IGameObject target,
+            out TargetValidationError error
+        )
+        {
+            var rangeOk = action.TargetInRangeAndLOS(target, out var rangeError);
+            var typeOk = action.TargetTypeValid(target);
+
+            error =
+                rangeOk && !typeOk
+                    ? TargetValidationError.InvalidTarget
+                    : TargetValidationErrors.FromActionStatus(rangeError);
+
+            return rangeOk && typeOk;
+        }
+
+        private static void ShowTargetError(TargetValidationError error)
+        {
+            ToastGui.ShowError(
+                error switch
+                {
+                    TargetValidationError.NotInLineOfSight => "Target not in line of sight.",
+                    TargetValidationError.NotInRange => "Target is not in range.",
+                    _ => "Invalid target.",
+                }
+            );
+        }
+
+        private unsafe bool ContinueOriginal(
+            IntPtr actionManager,
+            ActionType actionType,
+            uint actionId,
+            ulong targetId,
+            uint param,
+            uint origin,
+            uint unk,
+            Vector3* location
+        )
+        {
+            return useActionHook.Original(
+                actionManager,
+                actionType,
+                actionId,
+                targetId,
                 param,
                 origin,
                 unk,
@@ -242,7 +287,7 @@ namespace RedirectSmarter
 
         public void Dispose()
         {
-            UseActionHook?.Dispose();
+            useActionHook.Dispose();
         }
     }
 }

@@ -20,19 +20,23 @@ namespace RedirectSmarter
 
         private System.Action ToggleConfigWindow { get; }
         private Configuration Configuration { get; }
-        private Actions Actions { get; }
+        private ActionCatalog ActionCatalog { get; }
 
-        private List<uint> Jobs => Actions.GetJobInfo();
+        private List<uint> Jobs => ActionCatalog.GetJobInfo();
 
         private bool selectedRoleActions;
         private uint selectedJob;
         private string search = string.Empty;
 
-        public PluginUI(Configuration config, Actions actions, System.Action toggleConfigWindow)
+        public PluginUI(
+            Configuration config,
+            ActionCatalog actions,
+            System.Action toggleConfigWindow
+        )
             : base(Plugin.Name)
         {
             Configuration = config;
-            Actions = actions;
+            ActionCatalog = actions;
             ToggleConfigWindow = toggleConfigWindow;
 
             Size = new Vector2(760, 560);
@@ -112,8 +116,8 @@ namespace RedirectSmarter
             }
 
             var actions = selectedRoleActions
-                ? Actions.GetRoleActions()
-                : Actions.GetJobActions(selectedJob);
+                ? ActionCatalog.GetRoleActions()
+                : ActionCatalog.GetJobActions(selectedJob);
 
             var filtered = actions.Where(action => !action.IsPvP).Where(MatchesSearch).ToList();
 
@@ -236,7 +240,7 @@ namespace RedirectSmarter
             return save;
         }
 
-        private bool DrawAddRedirectionButton(uint actionId, dynamic redirection)
+        private bool DrawAddRedirectionButton(uint actionId, Redirection redirection)
         {
             var save = false;
             var canAdd = redirection.Count < MaxRedirects;
@@ -262,7 +266,7 @@ namespace RedirectSmarter
             return save;
         }
 
-        private bool DrawRedirectionPriority(LuminaAction action, dynamic redirection)
+        private static bool DrawRedirectionPriority(LuminaAction action, Redirection redirection)
         {
             var save = false;
             var removeIndex = -1;
