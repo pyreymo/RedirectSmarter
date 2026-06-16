@@ -52,12 +52,7 @@ namespace RedirectSmarter
                 [
                     .. Sheet.Where(a =>
                     {
-                        if (
-                            a.IsGroundActionBlocked()
-                            || a.ClassJob.RowId + 1 == 0
-                            || !a.IsPlayerAction
-                            || a.IsRoleAction
-                        )
+                        if (a.ClassJob.RowId + 1 == 0 || !a.IsPlayerAction || a.IsRoleAction)
                         {
                             return false;
                         }

@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Numerics;
-using System.Runtime.InteropServices;
 using Dalamud.Game.ClientState.Objects.Types;
 using Dalamud.Hooking;
 using Dalamud.Plugin.Services;
@@ -11,7 +10,6 @@ namespace RedirectSmarter
 {
     internal class GameHooks : IDisposable
     {
-        private const uint DefaultTarget = 0xE0000000;
         private Configuration Configuration { get; } = null!;
         private Actions Actions { get; } = null!;
         private static ITargetManager TargetManager => Services.TargetManager;
@@ -27,18 +25,7 @@ namespace RedirectSmarter
             uint unk,
             Vector3* l
         );
-        private unsafe delegate bool UseActionDelegate(
-            IntPtr tp,
-            ActionType t,
-            uint id,
-            ulong target,
-            Vector3* l,
-            uint param = 0
-        );
         private readonly Hook<TryActionDelegate> UseActionHook = null!;
-        private readonly UseActionDelegate UseAction = null!;
-
-        private const byte AbilityActionCategory = 4;
 
         public GameHooks(Configuration config, Actions actions)
         {
@@ -51,40 +38,9 @@ namespace RedirectSmarter
                     (IntPtr)ActionManager.MemberFunctionPointers.UseAction,
                     UseActionCallback
                 );
-                UseAction = Marshal.GetDelegateForFunctionPointer<UseActionDelegate>(
-                    (IntPtr)ActionManager.MemberFunctionPointers.UseActionLocation
-                );
             }
 
             UseActionHook.Enable();
-        }
-
-        private static bool TryQueueAction(
-            IntPtr actManager,
-            uint id,
-            uint param,
-            ActionType actType,
-            ulong targetId
-        )
-        {
-            Dalamud.SafeMemory.Read(actManager + 0x68, out int queueFull);
-
-            if (queueFull > 0)
-            {
-                return false;
-            }
-
-            // This is how the game queues actions within the "UseAction" function
-            // There is no separate function for it, it simply updates variables
-            // within the ActionManager during the call
-
-            Dalamud.SafeMemory.Write(actManager + 0x68, 1);
-            Dalamud.SafeMemory.Write(actManager + 0x6C, (byte)actType);
-            Dalamud.SafeMemory.Write(actManager + 0x70, id);
-            Dalamud.SafeMemory.Write(actManager + 0x78, targetId);
-            Dalamud.SafeMemory.Write(actManager + 0x80, 0); // "Origin", for whatever reason
-            Dalamud.SafeMemory.Write(actManager + 0x84, param);
-            return true;
         }
 
         private unsafe IGameObject? ResolvePlaceholder(string ph)
@@ -123,17 +79,6 @@ namespace RedirectSmarter
                 RedirectTargets.Party8 => ResolvePlaceholder(RedirectTargets.Party8),
                 _ => null,
             };
-        }
-
-        public static float DistanceFromPlayer(Vector3 v)
-        {
-            var player = Services.ObjectTable.LocalPlayer;
-            if (player is null)
-            {
-                return float.PositiveInfinity;
-            }
-
-            return Vector3.Distance(player.Position, v);
         }
 
         private unsafe bool UseActionCallback(
@@ -212,49 +157,6 @@ namespace RedirectSmarter
             // Retain queued actions calculated target
             if (origin == 1)
             {
-                if (adjustedRow.TargetArea && !adjustedRow.IsGroundActionBlocked())
-                {
-                    // Ground targeted actions should not normally reach the queue
-                    // Assume cursor placement is intended if no target is specified
-
-                    if (target == DefaultTarget)
-                    {
-                        Vector3 loc;
-                        var success =
-                            ActionManager.MemberFunctionPointers.GetGroundPositionForCursor(
-                                (ActionManager*)actManager,
-                                &loc
-                            );
-                        if (success)
-                        {
-                            return GroundActionAtCursor(
-                                actManager,
-                                type,
-                                id,
-                                target,
-                                param,
-                                origin,
-                                unk,
-                                &loc
-                            );
-                        }
-                    }
-                    else
-                    {
-                        IGameObject targetObj = Services.ObjectTable.SearchById(target)!;
-                        return GroundActionAtTarget(
-                            actManager,
-                            type,
-                            id,
-                            targetObj,
-                            param,
-                            origin,
-                            unk,
-                            location
-                        );
-                    }
-                }
-
                 return UseActionHook.Original(
                     actManager,
                     type,
@@ -275,90 +177,43 @@ namespace RedirectSmarter
 
             if (Configuration.Redirections.TryGetValue(configurationId, out Redirection? value))
             {
-                bool suppressRing = false;
-
                 foreach (var t in value.Priority)
                 {
-                    if (t == RedirectTargets.Cursor && adjustedRow.TargetArea)
+                    IGameObject? nt = ResolveTarget(t);
+                    if (nt is not null)
                     {
-                        suppressRing = true;
-                        Vector3 loc;
-                        var success =
-                            ActionManager.MemberFunctionPointers.GetGroundPositionForCursor(
-                                (ActionManager*)actManager,
-                                &loc
-                            );
-                        if (success)
+                        bool rangeOk = adjustedRow.TargetInRangeAndLOS(nt, out var err);
+                        bool typeOk = adjustedRow.TargetTypeValid(nt);
+                        if (rangeOk && typeOk)
                         {
-                            return GroundActionAtCursor(
+                            return UseActionHook.Original(
                                 actManager,
                                 type,
                                 id,
-                                target,
+                                nt.GameObjectId,
                                 param,
                                 origin,
                                 unk,
-                                &loc
+                                location
                             );
                         }
-                    }
-                    else
-                    {
-                        IGameObject? nt = ResolveTarget(t);
-                        if (nt is not null)
+                        else if (!Configuration.IgnoreErrors)
                         {
-                            bool rangeOk = adjustedRow.TargetInRangeAndLOS(nt, out var err);
-                            bool typeOk = adjustedRow.TargetTypeValid(nt);
-                            if (rangeOk && typeOk)
+                            switch (err)
                             {
-                                if (adjustedRow.TargetArea)
-                                {
-                                    return GroundActionAtTarget(
-                                        actManager,
-                                        type,
-                                        id,
-                                        nt,
-                                        param,
-                                        origin,
-                                        unk,
-                                        location
-                                    );
-                                }
-                                return UseActionHook.Original(
-                                    actManager,
-                                    type,
-                                    id,
-                                    nt.GameObjectId,
-                                    param,
-                                    origin,
-                                    unk,
-                                    location
-                                );
+                                case 566:
+                                    ToastGui.ShowError("Target not in line of sight.");
+                                    break;
+                                case 562:
+                                    ToastGui.ShowError("Target is not in range.");
+                                    break;
+                                default:
+                                    ToastGui.ShowError("Invalid target.");
+                                    break;
                             }
-                            else if (!Configuration.IgnoreErrors)
-                            {
-                                switch (err)
-                                {
-                                    case 566:
-                                        ToastGui.ShowError("Target not in line of sight.");
-                                        break;
-                                    case 562:
-                                        ToastGui.ShowError("Target is not in range.");
-                                        break;
-                                    default:
-                                        ToastGui.ShowError("Invalid target.");
-                                        break;
-                                }
-                                return false;
-                            }
+                            return false;
                         }
                     }
-                }
-
-                if (adjustedRow.TargetArea && suppressRing)
-                {
-                    ToastGui.ShowError("Invalid target.");
-                    return false;
                 }
 
                 return UseActionHook.Original(
@@ -372,34 +227,6 @@ namespace RedirectSmarter
                     location
                 );
             }
-            else
-            {
-                var ground = adjustedRow.TargetArea && !adjustedRow.IsGroundActionBlocked();
-                if (Configuration.DefaultCursorPlacement && ground)
-                {
-                    Vector3 loc;
-                    var success = ActionManager.MemberFunctionPointers.GetGroundPositionForCursor(
-                        (ActionManager*)actManager,
-                        &loc
-                    );
-                    if (success)
-                    {
-                        return GroundActionAtCursor(
-                            actManager,
-                            type,
-                            id,
-                            target,
-                            param,
-                            origin,
-                            unk,
-                            &loc
-                        );
-                    }
-
-                    ToastGui.ShowError("Invalid target.");
-                    return false;
-                }
-            }
 
             return UseActionHook.Original(
                 actManager,
@@ -411,133 +238,6 @@ namespace RedirectSmarter
                 unk,
                 location
             );
-        }
-
-        private unsafe bool GroundActionAtCursor(
-            IntPtr actManager,
-            ActionType type,
-            uint action,
-            ulong target,
-            uint param,
-            uint origin,
-            uint unk,
-            Vector3* location
-        )
-        {
-            var status = ActionManager.MemberFunctionPointers.GetActionStatus(
-                (ActionManager*)actManager,
-                type,
-                action,
-                (uint)target,
-                true,
-                true,
-                null
-            );
-
-            if (status != 0 && status != 0x244)
-            {
-                return UseActionHook.Original(
-                    actManager,
-                    type,
-                    action,
-                    target,
-                    param,
-                    origin,
-                    unk,
-                    location
-                );
-            }
-
-            Dalamud.SafeMemory.Read(actManager + 0x08, out float animationTime);
-            var actRow = Actions.GetRow(action)!;
-
-            if (status == 0x244 || animationTime > 0)
-            {
-                if (
-                    !Configuration.QueueGroundActions
-                    || actRow.ActionCategory.Value.RowId != AbilityActionCategory
-                )
-                {
-                    ToastGui.ShowError("Cannot use while casting.");
-                    return false;
-                }
-
-                return TryQueueAction(actManager, action, param, type, DefaultTarget);
-            }
-
-            var distance = DistanceFromPlayer(*location);
-
-            if (distance > actRow.Range)
-            {
-                ToastGui.ShowError("Target is not in range.");
-                return false;
-            }
-
-            return UseAction(actManager, type, action, target, location, param);
-        }
-
-        private unsafe bool GroundActionAtTarget(
-            IntPtr actManager,
-            ActionType type,
-            uint action,
-            IGameObject target,
-            uint param,
-            uint origin,
-            uint unk,
-            Vector3* location
-        )
-        {
-            var status = ActionManager.MemberFunctionPointers.GetActionStatus(
-                (ActionManager*)actManager,
-                type,
-                action,
-                target.GameObjectId,
-                true,
-                true,
-                null
-            );
-
-            if (status != 0 && status != 0x244)
-            {
-                return UseActionHook.Original(
-                    actManager,
-                    type,
-                    action,
-                    target.GameObjectId,
-                    param,
-                    origin,
-                    unk,
-                    location
-                );
-            }
-
-            Dalamud.SafeMemory.Read(actManager + 0x08, out float animationTime);
-            var actRow = Actions.GetRow(action)!;
-
-            if (status == 0x244 || animationTime > 0)
-            {
-                if (
-                    !Configuration.QueueGroundActions
-                    || actRow.ActionCategory.Value.RowId != AbilityActionCategory
-                )
-                {
-                    ToastGui.ShowError("Cannot use while casting.");
-                    return false;
-                }
-
-                return TryQueueAction(actManager, action, param, type, target.GameObjectId);
-            }
-
-            var newLoc = target.Position;
-            var distance = DistanceFromPlayer(newLoc);
-
-            if (distance > actRow.Range)
-            {
-                ToastGui.ShowError("Target is not in range.");
-                return false;
-            }
-
-            return UseAction(actManager, type, action, target.GameObjectId, &newLoc);
         }
 
         public void Dispose()

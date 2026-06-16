@@ -9,9 +9,7 @@ namespace RedirectSmarter
     public class Configuration : IPluginConfiguration
     {
         public int Version { get; set; } = 1;
-        public bool DefaultCursorPlacement { get; set; } = false;
         public bool EnableMacroQueueing { get; set; } = false;
-        public bool QueueGroundActions { get; set; } = false;
         public bool IgnoreErrors { get; set; } = true;
         public string DefaultRedirection { get; set; } = RedirectTargets.Target;
         public Dictionary<uint, Redirection> Redirections { get; set; } = [];

@@ -4,7 +4,6 @@ namespace RedirectSmarter
 {
     internal static class RedirectTargets
     {
-        public const string Cursor = "Cursor";
         public const string Target = "Target";
         public const string Focus = "Focus";
         public const string TargetOfTarget = "Target of Target";
@@ -21,7 +20,6 @@ namespace RedirectSmarter
 
         public static readonly string[] All =
         [
-            Cursor,
             Target,
             Focus,
             TargetOfTarget,

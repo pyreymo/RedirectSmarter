@@ -286,11 +286,6 @@ namespace RedirectSmarter
                 {
                     foreach (var option in RedirectTargets.All)
                     {
-                        if (option == RedirectTargets.Cursor && !action.TargetArea)
-                        {
-                            continue;
-                        }
-
                         var selected = option == redirection[i];
                         if (ImGui.Selectable(option, selected))
                         {

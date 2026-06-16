@@ -14,7 +14,7 @@ namespace RedirectSmarter
         {
             Configuration = configuration;
 
-            Size = new Vector2(460, 260);
+            Size = new Vector2(460, 220);
             SizeCondition = ImGuiCond.FirstUseEver;
         }
 
@@ -27,44 +27,10 @@ namespace RedirectSmarter
 
         public override void Draw()
         {
-            ImGui.TextUnformatted("Targeting");
-            ImGui.Separator();
-            ImGui.Spacing();
-
-            DrawTargetingOptions();
-
-            ImGui.Spacing();
-            ImGui.Separator();
-            ImGui.Spacing();
-
-            ImGui.TextUnformatted("Action queueing");
-            ImGui.Separator();
-            ImGui.Spacing();
-
-            DrawQueueOptions();
-        }
-
-        private void DrawTargetingOptions()
-        {
             DrawConfigCheckbox(
                 "Ignore range and target type errors",
                 Configuration.IgnoreErrors,
                 value => Configuration.IgnoreErrors = value
-            );
-
-            DrawConfigCheckbox(
-                "Place all ground targets at the cursor",
-                Configuration.DefaultCursorPlacement,
-                value => Configuration.DefaultCursorPlacement = value
-            );
-        }
-
-        private void DrawQueueOptions()
-        {
-            DrawConfigCheckbox(
-                "Ground targeted actions",
-                Configuration.QueueGroundActions,
-                value => Configuration.QueueGroundActions = value
             );
 
             DrawConfigCheckbox(
