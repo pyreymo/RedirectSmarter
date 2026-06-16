@@ -6,7 +6,7 @@ using Lumina.Excel.Sheets;
 
 namespace RedirectSmarter
 {
-    static class ExtensionMethods
+    internal static class ActionExtensions
     {
         private static readonly HashSet<uint> ActionAllowlist =
         [
@@ -16,15 +16,9 @@ namespace RedirectSmarter
             37021, // "Play III",
         ];
 
-        /// <summary>
-        /// For certain actions, only the upgraded version has optional targeting. This returns true for such actions.
-        /// * Relies on a manually updated list (ActionAllowlist)
-        /// </summary>
-        /// <param name="a"></param>
-        /// <returns></returns>
-        public static bool IsActionAllowed(this Action a) => ActionAllowlist.Contains(a.RowId);
+        public static bool IsExplicitlyAllowed(this Action a) => ActionAllowlist.Contains(a.RowId);
 
-        public static bool HasOptionalTargeting(this Action a) =>
+        public static bool HasConfigurableTarget(this Action a) =>
             a.CanTargetAlly || a.CanTargetHostile || a.CanTargetParty;
 
         public static bool CanTargetFriendly(this Action a) => a.CanTargetAlly || a.CanTargetParty;
@@ -71,7 +65,7 @@ namespace RedirectSmarter
                 );
             }
 
-            // 0 success, 562 no LOS, 566 range, 565 not facing
+            // 0 success, 562 range, 565 not facing, 566 line of sight
             // TODO: Check "auto face" option instead of assuming it is on
             return err == 0 || err == 565;
         }

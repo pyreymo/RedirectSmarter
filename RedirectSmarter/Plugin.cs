@@ -13,7 +13,7 @@ namespace RedirectSmarter
         private Configuration Configuration { get; set; }
         private PluginUI PluginUi { get; } = null!;
         private ConfigWindow ConfigWindow { get; } = null!;
-        private Actions Actions { get; } = null!;
+        private ActionCatalog ActionCatalog { get; } = null!;
         private GameHooks Hooks { get; } = null!;
 
         private readonly WindowSystem WindowSystem = new(Name);
@@ -43,10 +43,10 @@ namespace RedirectSmarter
                 Configuration.Save();
             }
 
-            Actions = new();
-            Hooks = new(Configuration, Actions);
+            ActionCatalog = new();
+            Hooks = new(Configuration, ActionCatalog);
             ConfigWindow = new ConfigWindow(Configuration);
-            PluginUi = new PluginUI(Configuration, Actions, ConfigWindow.Toggle);
+            PluginUi = new PluginUI(Configuration, ActionCatalog, ConfigWindow.Toggle);
 
             WindowSystem.AddWindow(PluginUi);
             WindowSystem.AddWindow(ConfigWindow);

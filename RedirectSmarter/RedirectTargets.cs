@@ -35,6 +35,6 @@ namespace RedirectSmarter
             Party8,
         ];
 
-        public static readonly HashSet<string> Valid = new(All);
+        public static readonly HashSet<string> Valid = [.. All];
     }
 }
