@@ -2,73 +2,94 @@
 
 Redirect Smarter is a [Dalamud](https://github.com/goatcorp/Dalamud) plugin for Final Fantasy XIV Online.
 
-The plugin lets you set priority-based action targets and queue supported macro actions without clipping the GCD.
+This fork is currently focused on explicit action redirection: for each supported action, you can define a priority list of ordinary game targets such as your current target, focus target, yourself, your chocobo, or party slots. When the action is used, the plugin tries those targets in order and falls back to the game's original target if none of them can be used.
+
+The long-term direction is smarter target selection. Future target modes may include choices such as the lowest-health party member, a party member with a dispellable status, or the center of the densest enemy cluster.
 
 ![Redirect Smarter preview](preview.png)
 
-### How do I install it?
+## Current Scope
+
+Redirect Smarter currently provides:
+
+- Per-action target priority lists.
+- Basic target validation for range, line of sight, and target type.
+- Optional skipping of invalid configured targets.
+- Optional macro action queueing.
+
+Redirect Smarter does not currently provide:
+
+- Mouseover targeting.
+- Ground-targeted action placement.
+- Automatic rotation logic.
+- Smart target selectors such as lowest HP, dispellable status, or enemy-density targeting.
+
+## Installation
 
 This plugin is currently available through the Dalamud plugin installer.
 
-### Commands
+## Command
 
-This plugin has a single command, `/rs`, that opens the configuration.
+Use `/rs` to open the configuration window.
 
-### Options menu
+## Configuration
 
-These options let you control how Redirect Smarter handles target changing:
+The main window lists supported actions by job. Select a job or role actions, find an action, then press the add button to create target priority entries for that action.
 
-- `Ignore range and target type errors`: Skips invalid targets instead of stopping the action with an error.
-  These options allow additional macro actions to enter the combat queue, avoiding "clipping" the GCD:
+Targets are tried from left to right. The first resolved target that passes range, line-of-sight, and target-type checks is used. If no configured target succeeds, the action continues with the game's original target.
 
-- `Actions from macros`: Prevents GCD clipping from macro actions.
+The settings window contains:
 
-## FAQ
+- `Ignore range and target type errors`: When enabled, invalid configured targets are skipped and the plugin tries the next target in the priority list. When disabled, the first invalid resolved target stops the action and shows an error.
+- `Actions from macros`: Allows eligible macro actions to enter the game's normal action queue path more like actions used from the hotbar.
 
-### How do I configure an action redirect?
+## Target Options
 
-Open the plugin configuration and select the job you are interested in. Scroll through the action list, or use the search field, to locate the action you wish to modify. If you cannot find the ability, it is not currently supported.
+The following explicit target options are currently supported:
 
-Once you have located the action, click the + button next to it and choose the targets you want to try. The final target is selected by priority from left to right.
-
-### What target options are available?
-
-The following are currently supported options:
-
-- `Self`: The player.
 - `Target`: Your current target.
 - `Focus`: Your current focus target.
 - `Target of Target`: Your target's target.
+- `Self`: The player.
 - `Soft Target`: Your current soft target.
 - `Chocobo`: Your chocobo companion.
 - `<2>` through `<8>`: Party member 2-8.
 
-### Why can I add more than one target option to a single action?
+## Macro Queueing
 
-The final target is selected based on a priority system from top to bottom. Once a match is made, that target will be used and anything below it will be ignored. If no match is made, the default target for the action will be attempted.
+Macro queueing only changes how eligible macro actions enter the game's existing action flow. It does not bypass the game's queue system, choose a rotation for you, or execute a full sequence automatically.
 
-### Why are lower level versions of spells listed? Can you combine them?
+For example:
 
-This is primarily due to the way the action bar handles upgrading spells automatically for synced content. While it is technically possible to combine them, there may be situations where this behavior is undesirable and will be left as is for now.
-
-### About macro queueing
-
-This plugin allows you to "queue" actions using macros as you normally would be able to via the action bar. This does not bypass the game's queue system or allow you to queue multiple things at the same time. It does, however, allow you to create priority-based macros or macros that use custom targeting without worrying about clipping.
-
-For example, you can create a Raise macro that will always try to use Swiftcast and then Raise your focus target:
-
-```
+```text
 /macroicon Raise
 /ac Swiftcast
 /ac Raise <f>
 ```
 
-Normally, if you try to use this macro while casting, nothing will happen. With macro queueing enabled, it will try to queue Swiftcast, and if it isn't available, it will try to queue Raise.
+With macro queueing enabled, actions from a macro can behave more like hotbar actions for queue timing. If an action also has a Redirect Smarter priority list, that configured target list can override the target written in the macro line.
 
-Note that if you also have custom action targeting enabled in the configuration, it will override your macro's intended target. However, this system allows you to avoid the configuration step altogether and simply play using normal ingame macros that now work as though they were action bar abilities.
+## Development Direction
 
-**Notice**: This is not setup to allow you to create one-button macros that will play the game for you, and actually explicitly prevents it. If you use a macro that has multiple actions that can succeed while you are not casting, it will use the first one immediately _and_ queue the second one. This is the intended behavior.
+The current implementation deliberately keeps target resolution simple and explicit. That makes the next layer easier to add: target providers that compute a target dynamically.
 
-### I have a different problem / I want to suggest something!
+Likely future target providers include:
 
-Please create an issue if one doesn't exist already. Keep in mind that requests aren't guaranteed to be fulfilled.
+- Lowest-health party member.
+- Party member with a dispellable status.
+- Party member missing a specific buff.
+- Best enemy target by nearby enemy density.
+- Best ground position derived from enemy clustering, if ground-targeted action support is reintroduced later.
+
+The important boundary is that these should be target-selection strategies, not action-rotation automation. The plugin should decide where an action goes after the user chooses to use that action.
+
+## Notes For Maintainers
+
+The current code is split around those boundaries:
+
+- `ActionCatalog` builds the list of configurable actions.
+- `ActionExtensions` owns action capability and target validation helpers.
+- `RedirectTargets` defines the currently supported explicit target names.
+- `TargetResolver` maps target names to game objects.
+- `GameHooks` owns the action-use hook, macro-origin normalization, and configured target application.
+- `Configuration` stores user settings and prunes unsupported target names from older configs.
