@@ -6,7 +6,9 @@
     <Version>1.2.7.1</Version>
     <Description>Action target switching plugin for Dalamud.</Description>
     <Copyright>Cair © 2021 - 2026</Copyright>
-    <PackageProjectUrl>https://github.com/cairthenn/Redirect</PackageProjectUrl>
+    <PackageProjectUrl>https://github.com/cairthenn/RedirectSmarter</PackageProjectUrl>
+    <AssemblyName>RedirectSmarter</AssemblyName>
+    <RootNamespace>RedirectSmarter</RootNamespace>
   </PropertyGroup>
 
   <PropertyGroup>
@@ -21,11 +23,11 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <None Remove="Redirect.json" />
+    <None Remove="RedirectSmarter.json" />
   </ItemGroup>
 
   <ItemGroup>
-    <Content Include="Redirect.json">
+    <Content Include="RedirectSmarter.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
   </ItemGroup>

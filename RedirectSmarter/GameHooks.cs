@@ -7,7 +7,7 @@ using Dalamud.Plugin.Services;
 using FFXIVClientStructs.FFXIV.Client.Game;
 using FFXIVClientStructs.FFXIV.Client.UI.Misc;
 
-namespace Redirect
+namespace RedirectSmarter
 {
     internal class GameHooks : IDisposable
     {

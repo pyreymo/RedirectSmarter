@@ -1,10 +1,10 @@
-# Redirect
+# Redirect Smarter
  
-Redirect is a [Dalamud](https://github.com/goatcorp/Dalamud) plugin for Final Fantasy XIV Online. 
+Redirect Smarter is a [Dalamud](https://github.com/goatcorp/Dalamud) plugin for Final Fantasy XIV Online. 
 
 The plugin enables seamless use of mouseover and focus target functionality by allowing you to change the base targeting priority of each action on your bars.
 
-![Redirect preview](https://github.com/cairthenn/Redirect/blob/main/preview.png?raw=true)
+![Redirect Smarter preview](preview.png)
 
 ### How do I install it?
 
@@ -12,11 +12,11 @@ This plugin is currently available through the Dalamud plugin installer.
 
 ### Commands
 
-This plugin has a single command, `/redirect`, that opens the configuration. In addition to the standard configuration, there is an options menu that provides some additional features.
+This plugin has a single command, `/rs`, that opens the configuration. In addition to the standard configuration, there is an options menu that provides some additional features.
 
 ### Options menu
 
-These options let you control how Redirect handles target changing:
+These options let you control how Redirect Smarter handles target changing:
 
 * `Ignore range and target type errors` : Sometimes, the target selection process encounters a target that is out of range or otherwise invalid. This skips those instead of erroring.
 * `Treat all <friendly/hostile> actions as mouseovers` : Treats all actions of the specified type as UI mouseover candidates by default

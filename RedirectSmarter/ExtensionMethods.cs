@@ -4,7 +4,7 @@ using Dalamud.Game.ClientState.Objects.Types;
 using FFXIVClientStructs.FFXIV.Client.Game;
 using Lumina.Excel.Sheets;
 
-namespace Redirect
+namespace RedirectSmarter
 {
     static class ExtensionMethods
     {

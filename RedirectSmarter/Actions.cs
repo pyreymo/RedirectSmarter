@@ -4,7 +4,7 @@ using System.Threading.Tasks;
 using Lumina.Excel;
 using Lumina.Excel.Sheets;
 
-namespace Redirect
+namespace RedirectSmarter
 {
     public class Actions
     {

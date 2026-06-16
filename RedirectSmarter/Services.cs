@@ -2,7 +2,7 @@
 using Dalamud.Plugin;
 using Dalamud.Plugin.Services;
 
-namespace Redirect
+namespace RedirectSmarter
 {
     public class Services
     {

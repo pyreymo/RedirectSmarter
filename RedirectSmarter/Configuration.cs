@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using Dalamud.Configuration;
 
-namespace Redirect
+namespace RedirectSmarter
 {
     [Serializable]
     public class Configuration : IPluginConfiguration
