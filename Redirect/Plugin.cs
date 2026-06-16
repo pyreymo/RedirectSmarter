@@ -1,11 +1,12 @@
-﻿using Dalamud.Game.Command;
+﻿using System;
+using Dalamud.Game.Command;
 using Dalamud.Plugin;
-using System;
 using Dalamud.Plugin.Services;
 
-namespace Redirect {
-    public class Plugin : IDalamudPlugin, IDisposable {
-
+namespace Redirect
+{
+    public class Plugin : IDalamudPlugin, IDisposable
+    {
         public static string Name => "Redirect";
         private const string CommandName = "/redirect";
         private Configuration Configuration { get; set; }
@@ -16,15 +17,19 @@ namespace Redirect {
         public static IDataManager DataManager => Services.DataManager;
         public static ICommandManager CommandManager => Services.CommandManager;
 
-
-        public Plugin(IDalamudPluginInterface i) {
+        public Plugin(IDalamudPluginInterface i)
+        {
             Services.Initialize(i);
 
-            try {
+            try
+            {
                 Configuration = Interface.GetPluginConfig() as Configuration ?? new Configuration();
             }
-            catch (Exception) {
-                Services.PluginLog.Error("Failed to load plugin configuration. A new configuration file has been created.");
+            catch (Exception)
+            {
+                Services.PluginLog.Error(
+                    "Failed to load plugin configuration. A new configuration file has been created."
+                );
                 Configuration = new Configuration();
             }
 
@@ -32,21 +37,23 @@ namespace Redirect {
             Hooks = new(Configuration, Actions);
             PluginUi = new(this, Configuration, Actions);
 
-            CommandManager.AddHandler(CommandName, new CommandInfo(OnCommand) {
-                HelpMessage = "Opens the configuration menu"
-            });
+            CommandManager.AddHandler(
+                CommandName,
+                new CommandInfo(OnCommand) { HelpMessage = "Opens the configuration menu" }
+            );
         }
 
-        public void Dispose() {
+        public void Dispose()
+        {
             Hooks.Dispose();
             PluginUi.Dispose();
             Configuration.Save();
             CommandManager.RemoveHandler(CommandName);
         }
 
-        private void OnCommand(string command, string args) {
+        private void OnCommand(string command, string args)
+        {
             PluginUi.MainWindowVisible = true;
         }
-
     }
 }

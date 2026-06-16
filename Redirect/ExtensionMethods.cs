@@ -1,22 +1,24 @@
-﻿using Lumina.Excel.Sheets;
-using System.Collections.Generic;
-using Dalamud.Game.ClientState.Objects.Types;
+﻿using System.Collections.Generic;
 using Dalamud.Game.ClientState.Objects.Enums;
+using Dalamud.Game.ClientState.Objects.Types;
 using FFXIVClientStructs.FFXIV.Client.Game;
+using Lumina.Excel.Sheets;
 
-namespace Redirect {
-
-    static class ExtensionMethods {
-
-        private static readonly HashSet<uint> GroundActionBlocklist = [
+namespace Redirect
+{
+    static class ExtensionMethods
+    {
+        private static readonly HashSet<uint> GroundActionBlocklist =
+        [
             // Actions that are flagged with TargetArea that do not behave like normal ground targeted actions
-            3573,   // "Ley Lines",
-            7419,   // "Between the Lines",
-            24403,  // "Regress",
-            34675,  // "Starry Muse",
+            3573, // "Ley Lines",
+            7419, // "Between the Lines",
+            24403, // "Regress",
+            34675, // "Starry Muse",
         ];
 
-        private static readonly HashSet<uint> ActionAllowlist = [
+        private static readonly HashSet<uint> ActionAllowlist =
+        [
             25822, // "Astral Flow",
             37019, // "Play I",
             37020, // "Play II",
@@ -37,42 +39,59 @@ namespace Redirect {
         /// </summary>
         /// <param name="a"></param>
         /// <returns></returns>
-        public static bool IsGroundActionBlocked(this Action a) => GroundActionBlocklist.Contains(a.RowId);
+        public static bool IsGroundActionBlocked(this Action a) =>
+            GroundActionBlocklist.Contains(a.RowId);
 
-        public static bool HasOptionalTargeting(this Action a) => a.CanTargetAlly || a.CanTargetHostile || a.CanTargetParty || a.TargetArea;
+        public static bool HasOptionalTargeting(this Action a) =>
+            a.CanTargetAlly || a.CanTargetHostile || a.CanTargetParty || a.TargetArea;
 
         public static bool CanTargetFriendly(this Action a) => a.CanTargetAlly || a.CanTargetParty;
 
-        public static bool TargetTypeValid(this Action a, IGameObject target) {
-
-            if(a.TargetArea) {
+        public static bool TargetTypeValid(this Action a, IGameObject target)
+        {
+            if (a.TargetArea)
+            {
                 return true;
             }
 
-            switch (target.ObjectKind) {
+            switch (target.ObjectKind)
+            {
                 case ObjectKind.BattleNpc:
                     IBattleNpc npc = (IBattleNpc)target;
-                    return npc.BattleNpcKind == BattleNpcSubKind.Combatant ? a.CanTargetHostile : a.CanTargetFriendly();
+                    return npc.BattleNpcKind == BattleNpcSubKind.Combatant
+                        ? a.CanTargetHostile
+                        : a.CanTargetFriendly();
                 case ObjectKind.EventNpc:
                 case ObjectKind.Pc:
                 case ObjectKind.Companion:
                     return a.CanTargetFriendly();
                 default:
-                    Services.PluginLog.Information($"{a.Name} cannot be used on {target.Name} with type {target.ObjectKind}");
+                    Services.PluginLog.Information(
+                        $"{a.Name} cannot be used on {target.Name} with type {target.ObjectKind}"
+                    );
                     return false;
             }
         }
 
-        public static bool TargetInRangeAndLOS(this Action a, IGameObject target, out uint err) {
-            if (Services.ObjectTable.LocalPlayer is not { } player) {
+        public static bool TargetInRangeAndLOS(this Action a, IGameObject target, out uint err)
+        {
+            if (Services.ObjectTable.LocalPlayer is not { } player)
+            {
                 err = 0;
                 return false;
             }
 
-            unsafe {
-                var playerPtr = (FFXIVClientStructs.FFXIV.Client.Game.Object.GameObject*)player.Address;
-                var targetPtr = (FFXIVClientStructs.FFXIV.Client.Game.Object.GameObject*)target.Address;
-                err = ActionManager.MemberFunctionPointers.GetActionInRangeOrLoS(a.RowId, playerPtr, targetPtr);
+            unsafe
+            {
+                var playerPtr = (FFXIVClientStructs.FFXIV.Client.Game.Object.GameObject*)
+                    player.Address;
+                var targetPtr = (FFXIVClientStructs.FFXIV.Client.Game.Object.GameObject*)
+                    target.Address;
+                err = ActionManager.MemberFunctionPointers.GetActionInRangeOrLoS(
+                    a.RowId,
+                    playerPtr,
+                    targetPtr
+                );
             }
 
             // 0 success, 562 no LOS, 566 range, 565 not facing

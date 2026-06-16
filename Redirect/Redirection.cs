@@ -2,9 +2,11 @@
 using System.Collections.Generic;
 using Newtonsoft.Json;
 
-namespace Redirect {
+namespace Redirect
+{
     [Serializable]
-    public class Redirection {
+    public class Redirection
+    {
         public uint ID { get; init; }
         public List<string> Priority { get; set; } = [];
 
@@ -12,12 +14,14 @@ namespace Redirect {
         public int Count => Priority!.Count;
 
         [JsonIgnore]
-        public string this[int i] {
+        public string this[int i]
+        {
             get { return Priority[i]; }
             set { Priority[i] = value; }
         }
 
         public void RemoveAt(int i) => Priority.RemoveAt(i);
+
         public void Add(string value) => Priority.Add(value);
     }
 }
