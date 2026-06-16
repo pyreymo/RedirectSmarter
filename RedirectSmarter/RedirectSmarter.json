@@ -1,10 +1,10 @@
 {
   "ApplicableVersion": "any",
-  "Author": "Cair",
+  "Author": "pyreymo",
   "Tags": ["jobs", "utility"],
-  "Description": "Easily change the targeting priority for spells and abilities. Queue macro actions! Type /rs to configure.",
+  "Description": "Route supported actions through configurable target priorities. Type /rs to configure.",
   "InternalName": "RedirectSmarter",
   "Name": "Redirect Smarter",
-  "Punchline": "Priority-based action targeting and macro queueing",
-  "RepoUrl": "https://github.com/cairthenn/RedirectSmarter"
+  "Punchline": "Send each action where it should go.",
+  "RepoUrl": "https://github.com/pyreymo/RedirectSmarter"
 }

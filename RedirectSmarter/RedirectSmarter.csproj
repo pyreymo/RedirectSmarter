@@ -1,12 +1,12 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project Sdk="Dalamud.NET.Sdk/15.0.0">
   <PropertyGroup>
-    <Authors></Authors>
-    <Company></Company>
-    <Version>1.2.7.1</Version>
-    <Description>Action target switching plugin for Dalamud.</Description>
-    <Copyright>Cair © 2021 - 2026</Copyright>
-    <PackageProjectUrl>https://github.com/cairthenn/RedirectSmarter</PackageProjectUrl>
+    <Authors>pyreymo</Authors>
+    <Company>pyreymo</Company>
+    <Version>0.1.0.0</Version>
+    <Description>Route supported actions through configurable target priorities.</Description>
+    <Copyright>pyreymo © 2026</Copyright>
+    <PackageProjectUrl>https://github.com/pyreymo/RedirectSmarter</PackageProjectUrl>
     <AssemblyName>RedirectSmarter</AssemblyName>
     <RootNamespace>RedirectSmarter</RootNamespace>
   </PropertyGroup>
@@ -33,7 +33,7 @@
   </ItemGroup>
 
   <ItemGroup>
-	  <Content Include="icon.png" Link="images\icon.png" CopyToOutputDirectory="Always" />
+	  <Content Include="..\images\icon.png" Link="images\icon.png" CopyToOutputDirectory="Always" />
   </ItemGroup>
 
   <ItemGroup>

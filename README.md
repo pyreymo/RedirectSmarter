@@ -1,12 +1,26 @@
-# Redirect Smarter
+<p align="center">
+  <img src="./images/icon.png" alt="Redirect Smarter icon" width="128">
+</p>
 
-Redirect Smarter is a [Dalamud](https://github.com/goatcorp/Dalamud) plugin for Final Fantasy XIV Online.
+<h1 align="center">Redirect Smarter</h1>
 
-This fork is currently focused on explicit action redirection: for each supported action, you can define a priority list of ordinary game targets such as your current target, focus target, yourself, your chocobo, or party slots. When the action is used, the plugin tries those targets in order and falls back to the game's original target if none of them can be used.
+<p align="center">
+  Send each action where it should go.
+</p>
 
-The long-term direction is smarter target selection. Future target modes may include choices such as the lowest-health party member, a party member with a dispellable status, or the center of the densest enemy cluster.
+<p align="center">
+  <img src="https://img.shields.io/badge/Dalamud%20API-15-blue" alt="Dalamud API 15">
+</p>
 
-![Redirect Smarter preview](preview.png)
+## Overview
+
+**Redirect Smarter** is a [Dalamud](https://github.com/goatcorp/Dalamud) plugin for Final Fantasy XIV Online.
+
+It redirects supported actions to explicitly configured targets. For each action, you can define a priority list using ordinary game targets such as your current target, focus target, yourself, your chocobo, or party slots.
+
+When the action is used, Redirect Smarter tries those targets from left to right. The first resolved target that passes validation is used. If no configured target succeeds, the action falls back to the game's original target.
+
+The current goal is simple: make action targeting more predictable without turning the plugin into rotation automation.
 
 ## Current Scope
 
