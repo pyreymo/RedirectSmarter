@@ -14,7 +14,7 @@ namespace RedirectSmarter
         {
             Configuration = configuration;
 
-            Size = new Vector2(460, 360);
+            Size = new Vector2(460, 260);
             SizeCondition = ImGuiCond.FirstUseEver;
         }
 
@@ -27,11 +27,11 @@ namespace RedirectSmarter
 
         public override void Draw()
         {
-            ImGui.TextUnformatted("Default redirection");
+            ImGui.TextUnformatted("Targeting");
             ImGui.Separator();
             ImGui.Spacing();
 
-            DrawRedirectionOptions();
+            DrawTargetingOptions();
 
             ImGui.Spacing();
             ImGui.Separator();
@@ -44,7 +44,7 @@ namespace RedirectSmarter
             DrawQueueOptions();
         }
 
-        private void DrawRedirectionOptions()
+        private void DrawTargetingOptions()
         {
             DrawConfigCheckbox(
                 "Ignore range and target type errors",
@@ -53,49 +53,9 @@ namespace RedirectSmarter
             );
 
             DrawConfigCheckbox(
-                "Treat all friendly actions as mouseovers",
-                Configuration.DefaultMouseoverFriendly,
-                value => Configuration.DefaultMouseoverFriendly = value
-            );
-
-            if (Configuration.DefaultMouseoverFriendly)
-            {
-                ImGui.Indent();
-                DrawConfigCheckbox(
-                    "Include friendly target models",
-                    Configuration.DefaultModelMouseoverFriendly,
-                    value => Configuration.DefaultModelMouseoverFriendly = value
-                );
-                ImGui.Unindent();
-            }
-
-            DrawConfigCheckbox(
-                "Treat all hostile actions as mouseovers",
-                Configuration.DefaultMouseoverHostile,
-                value => Configuration.DefaultMouseoverHostile = value
-            );
-
-            if (Configuration.DefaultMouseoverHostile)
-            {
-                ImGui.Indent();
-                DrawConfigCheckbox(
-                    "Include hostile target models",
-                    Configuration.DefaultModelMouseoverHostile,
-                    value => Configuration.DefaultModelMouseoverHostile = value
-                );
-                ImGui.Unindent();
-            }
-
-            DrawConfigCheckbox(
-                "Treat all ground-targeted actions as mouseovers",
-                Configuration.DefaultMouseoverGround,
-                value => Configuration.DefaultMouseoverGround = value
-            );
-
-            DrawConfigCheckbox(
                 "Place all ground targets at the cursor",
-                Configuration.DefaultCursorMouseover,
-                value => Configuration.DefaultCursorMouseover = value
+                Configuration.DefaultCursorPlacement,
+                value => Configuration.DefaultCursorPlacement = value
             );
         }
 

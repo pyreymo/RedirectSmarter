@@ -28,26 +28,6 @@ namespace RedirectSmarter
         private uint selectedJob;
         private string search = string.Empty;
 
-        private readonly string[] targetOptions =
-        [
-            "Cursor",
-            "UI Mouseover",
-            "Model Mouseover",
-            "Target",
-            "Focus",
-            "Target of Target",
-            "Self",
-            "Soft Target",
-            "Chocobo",
-            "<2>",
-            "<3>",
-            "<4>",
-            "<5>",
-            "<6>",
-            "<7>",
-            "<8>",
-        ];
-
         public PluginUI(Configuration config, Actions actions, System.Action toggleConfigWindow)
             : base(Plugin.Name)
         {
@@ -304,9 +284,9 @@ namespace RedirectSmarter
                 ImGui.SetNextItemWidth(RedirectComboWidth);
                 if (ImGui.BeginCombo($"##redirection-{action.RowId}-{i}", redirection[i]))
                 {
-                    foreach (var option in targetOptions)
+                    foreach (var option in RedirectTargets.All)
                     {
-                        if (option == "Cursor" && !action.TargetArea)
+                        if (option == RedirectTargets.Cursor && !action.TargetArea)
                         {
                             continue;
                         }

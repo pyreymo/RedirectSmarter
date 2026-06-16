@@ -35,7 +35,6 @@ namespace RedirectSmarter
             Vector3* l,
             uint param = 0
         );
-        private delegate void MouseoverEntityDelegate(IntPtr t, IntPtr entity);
         private readonly Hook<TryActionDelegate> UseActionHook = null!;
         private readonly UseActionDelegate UseAction = null!;
 
@@ -103,38 +102,25 @@ namespace RedirectSmarter
             }
         }
 
-        private unsafe IGameObject? GetCurrentUIMouseover()
-        {
-            var pm = PronounModule.Instance();
-            if (pm is null)
-            {
-                return null;
-            }
-            var obj = (IntPtr)pm->UiMouseOverTarget;
-            return Services.ObjectTable.CreateObjectReference(obj);
-        }
-
         public unsafe IGameObject? ResolveTarget(string target)
         {
             return target switch
             {
-                "UI Mouseover" => GetCurrentUIMouseover(),
-                "Model Mouseover" => TargetManager.MouseOverTarget,
-                "Self" => Services.ObjectTable.LocalPlayer,
-                "Target" => TargetManager.Target,
-                "Focus" => TargetManager.FocusTarget,
-                "Target of Target" => TargetManager.Target is { }
+                RedirectTargets.Self => Services.ObjectTable.LocalPlayer,
+                RedirectTargets.Target => TargetManager.Target,
+                RedirectTargets.Focus => TargetManager.FocusTarget,
+                RedirectTargets.TargetOfTarget => TargetManager.Target is { }
                     ? TargetManager.Target.TargetObject
                     : null,
-                "Soft Target" => TargetManager.SoftTarget,
-                "Chocobo" => ResolvePlaceholder("<b>"),
-                "<2>" => ResolvePlaceholder("<2>"),
-                "<3>" => ResolvePlaceholder("<3>"),
-                "<4>" => ResolvePlaceholder("<4>"),
-                "<5>" => ResolvePlaceholder("<5>"),
-                "<6>" => ResolvePlaceholder("<6>"),
-                "<7>" => ResolvePlaceholder("<7>"),
-                "<8>" => ResolvePlaceholder("<8>"),
+                RedirectTargets.SoftTarget => TargetManager.SoftTarget,
+                RedirectTargets.Chocobo => ResolvePlaceholder("<b>"),
+                RedirectTargets.Party2 => ResolvePlaceholder(RedirectTargets.Party2),
+                RedirectTargets.Party3 => ResolvePlaceholder(RedirectTargets.Party3),
+                RedirectTargets.Party4 => ResolvePlaceholder(RedirectTargets.Party4),
+                RedirectTargets.Party5 => ResolvePlaceholder(RedirectTargets.Party5),
+                RedirectTargets.Party6 => ResolvePlaceholder(RedirectTargets.Party6),
+                RedirectTargets.Party7 => ResolvePlaceholder(RedirectTargets.Party7),
+                RedirectTargets.Party8 => ResolvePlaceholder(RedirectTargets.Party8),
                 _ => null,
             };
         }
@@ -293,7 +279,7 @@ namespace RedirectSmarter
 
                 foreach (var t in value.Priority)
                 {
-                    if (t == "Cursor" && adjustedRow.TargetArea)
+                    if (t == RedirectTargets.Cursor && adjustedRow.TargetArea)
                     {
                         suppressRing = true;
                         Vector3 loc;
@@ -388,80 +374,8 @@ namespace RedirectSmarter
             }
             else
             {
-                IGameObject? nt = null;
-                var friendly = adjustedRow.CanTargetFriendly();
-                var hostile = adjustedRow.CanTargetHostile && !friendly;
                 var ground = adjustedRow.TargetArea && !adjustedRow.IsGroundActionBlocked();
-                var mo =
-                    ground ? Configuration.DefaultMouseoverGround
-                    : friendly ? Configuration.DefaultMouseoverFriendly
-                    : hostile && Configuration.DefaultMouseoverHostile;
-                var modelMO =
-                    friendly && mo
-                        ? Configuration.DefaultModelMouseoverFriendly
-                        : hostile && mo && Configuration.DefaultModelMouseoverHostile;
-                var currentMO = GetCurrentUIMouseover();
-                if (currentMO is not null && mo)
-                {
-                    bool rangeOk = adjustedRow.TargetInRangeAndLOS(currentMO, out _);
-                    bool typeOk = adjustedRow.TargetTypeValid(currentMO);
-                    if (rangeOk && typeOk)
-                    {
-                        nt = currentMO;
-                    }
-                    else if (!Configuration.IgnoreErrors)
-                    {
-                        ToastGui.ShowError(rangeOk ? "Invalid target." : "Target is not in range.");
-                        return false;
-                    }
-                }
-                else if (TargetManager.MouseOverTarget is not null && modelMO)
-                {
-                    bool rangeOk = adjustedRow.TargetInRangeAndLOS(
-                        TargetManager.MouseOverTarget,
-                        out _
-                    );
-                    bool typeOk = adjustedRow.TargetTypeValid(TargetManager.MouseOverTarget);
-                    if (rangeOk && typeOk)
-                    {
-                        nt = TargetManager.MouseOverTarget;
-                    }
-                    else if (!Configuration.IgnoreErrors)
-                    {
-                        ToastGui.ShowError(rangeOk ? "Invalid target." : "Target is not in range.");
-                        return false;
-                    }
-                }
-
-                if (nt is not null)
-                {
-                    if (adjustedRow.TargetArea)
-                    {
-                        return GroundActionAtTarget(
-                            actManager,
-                            type,
-                            id,
-                            nt,
-                            param,
-                            origin,
-                            unk,
-                            location
-                        );
-                    }
-
-                    return UseActionHook.Original(
-                        actManager,
-                        type,
-                        id,
-                        nt.GameObjectId,
-                        param,
-                        origin,
-                        unk,
-                        location
-                    );
-                }
-
-                if (Configuration.DefaultCursorMouseover && ground)
+                if (Configuration.DefaultCursorPlacement && ground)
                 {
                     Vector3 loc;
                     var success = ActionManager.MemberFunctionPointers.GetGroundPositionForCursor(

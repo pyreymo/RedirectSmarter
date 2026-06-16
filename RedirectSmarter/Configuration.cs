@@ -1,5 +1,6 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
+using System.Linq;
 using Dalamud.Configuration;
 
 namespace RedirectSmarter
@@ -8,17 +9,43 @@ namespace RedirectSmarter
     public class Configuration : IPluginConfiguration
     {
         public int Version { get; set; } = 1;
-        public bool DefaultMouseoverFriendly { get; set; } = false;
-        public bool DefaultModelMouseoverFriendly { get; set; } = false;
-        public bool DefaultMouseoverHostile { get; set; } = false;
-        public bool DefaultModelMouseoverHostile { get; set; } = false;
-        public bool DefaultMouseoverGround { get; set; } = false;
-        public bool DefaultCursorMouseover { get; set; } = false;
+        public bool DefaultCursorPlacement { get; set; } = false;
         public bool EnableMacroQueueing { get; set; } = false;
         public bool QueueGroundActions { get; set; } = false;
         public bool IgnoreErrors { get; set; } = true;
-        public string DefaultRedirection { get; set; } = "UI Mouseover";
+        public string DefaultRedirection { get; set; } = RedirectTargets.Target;
         public Dictionary<uint, Redirection> Redirections { get; set; } = [];
+
+        public bool PruneUnsupportedRedirections()
+        {
+            var changed = false;
+
+            if (!RedirectTargets.Valid.Contains(DefaultRedirection))
+            {
+                DefaultRedirection = RedirectTargets.Target;
+                changed = true;
+            }
+
+            foreach (var (actionId, redirection) in Redirections.ToList())
+            {
+                var removed = redirection.Priority.RemoveAll(target =>
+                    !RedirectTargets.Valid.Contains(target)
+                );
+
+                if (removed > 0)
+                {
+                    changed = true;
+                }
+
+                if (redirection.Count == 0)
+                {
+                    Redirections.Remove(actionId);
+                    changed = true;
+                }
+            }
+
+            return changed;
+        }
 
         public void Save()
         {

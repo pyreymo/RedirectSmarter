@@ -38,6 +38,11 @@ namespace RedirectSmarter
                 Configuration = new Configuration();
             }
 
+            if (Configuration.PruneUnsupportedRedirections())
+            {
+                Configuration.Save();
+            }
+
             Actions = new();
             Hooks = new(Configuration, Actions);
             ConfigWindow = new ConfigWindow(Configuration);
