@@ -7,6 +7,7 @@ using Dalamud.Interface;
 using Dalamud.Interface.Textures;
 using Dalamud.Interface.Windowing;
 using Lumina.Excel.Sheets;
+using RedirectSmarter.Localization;
 using LuminaAction = Lumina.Excel.Sheets.Action;
 
 namespace RedirectSmarter
@@ -48,7 +49,7 @@ namespace RedirectSmarter
                     Icon = FontAwesomeIcon.Cog,
                     IconOffset = new Vector2(2, 1),
                     Click = _ => ToggleConfigWindow(),
-                    ShowTooltip = () => ImGui.SetTooltip("Settings"),
+                    ShowTooltip = () => ImGui.SetTooltip(Loc.Text("Tooltip.Settings")),
                 }
             );
         }
@@ -81,10 +82,10 @@ namespace RedirectSmarter
 
         private void DrawJobList()
         {
-            ImGui.TextUnformatted("Jobs");
+            ImGui.TextUnformatted(Loc.Text("Section.Jobs"));
             ImGui.Separator();
 
-            if (ImGui.Selectable("Role Actions", selectedRoleActions))
+            if (ImGui.Selectable(Loc.Text("Section.RoleActions"), selectedRoleActions))
             {
                 selectedRoleActions = true;
                 selectedJob = 0;
@@ -131,7 +132,7 @@ namespace RedirectSmarter
             var region = ImGui.GetContentRegionAvail();
             ImGui.SetCursorPosY(ImGui.GetCursorPosY() + region.Y * 0.42f);
 
-            var text = "Select a job to get started.";
+            var text = Loc.Text("Empty.SelectJob");
             var textSize = ImGui.CalcTextSize(text);
             ImGui.SetCursorPosX(
                 ImGui.GetCursorPosX() + Math.Max(0, (region.X - textSize.X) * 0.5f)
@@ -143,22 +144,22 @@ namespace RedirectSmarter
         {
             ImGui.TextUnformatted(GetSelectionTitle());
             ImGui.SameLine();
-            ImGui.TextDisabled($"{actionCount} actions");
+            ImGui.TextDisabled(Loc.Text("Action.Count", actionCount));
 
             ImGui.SetNextItemWidth(-1);
-            ImGui.InputTextWithHint("##search", "Search actions", ref search, 250);
+            ImGui.InputTextWithHint("##search", Loc.Text("Search.Actions"), ref search, 250);
         }
 
         private string GetSelectionTitle()
         {
             if (selectedRoleActions)
             {
-                return "Role Actions";
+                return Loc.Text("Section.RoleActions");
             }
 
             var cjSheet = Services.DataManager.GetExcelSheet<ClassJob>()!;
             var jobRow = cjSheet.GetRow(selectedJob);
-            return jobRow is { } row ? row.Name.ExtractText() : "Actions";
+            return jobRow is { } row ? row.Name.ExtractText() : Loc.Text("Section.Actions");
         }
 
         private bool MatchesSearch(LuminaAction action)
@@ -184,9 +185,12 @@ namespace RedirectSmarter
             }
 
             ImGui.TableSetupColumn("##icon", ImGuiTableColumnFlags.WidthFixed);
-            ImGui.TableSetupColumn("Action", ImGuiTableColumnFlags.WidthFixed);
-            ImGui.TableSetupColumn("Add", ImGuiTableColumnFlags.WidthFixed);
-            ImGui.TableSetupColumn("Redirect priority", ImGuiTableColumnFlags.WidthStretch);
+            ImGui.TableSetupColumn(Loc.Text("Table.Action"), ImGuiTableColumnFlags.WidthFixed);
+            ImGui.TableSetupColumn(Loc.Text("Table.Add"), ImGuiTableColumnFlags.WidthFixed);
+            ImGui.TableSetupColumn(
+                Loc.Text("Table.RedirectPriority"),
+                ImGuiTableColumnFlags.WidthStretch
+            );
             ImGui.TableSetupScrollFreeze(0, 1);
             ImGui.TableHeadersRow();
 
@@ -274,7 +278,7 @@ namespace RedirectSmarter
             if (redirection.Count == 0)
             {
                 ImGui.AlignTextToFramePadding();
-                ImGui.TextDisabled("No redirects");
+                ImGui.TextDisabled(Loc.Text("Redirect.None"));
                 return false;
             }
 
@@ -286,12 +290,22 @@ namespace RedirectSmarter
                 }
 
                 ImGui.SetNextItemWidth(RedirectComboWidth);
-                if (ImGui.BeginCombo($"##redirection-{action.RowId}-{i}", redirection[i]))
+                if (
+                    ImGui.BeginCombo(
+                        $"##redirection-{action.RowId}-{i}",
+                        RedirectTargets.DisplayName(redirection[i])
+                    )
+                )
                 {
                     foreach (var option in RedirectTargets.All)
                     {
                         var selected = option == redirection[i];
-                        if (ImGui.Selectable(option, selected))
+                        if (
+                            ImGui.Selectable(
+                                $"{RedirectTargets.DisplayName(option)}##{option}",
+                                selected
+                            )
+                        )
                         {
                             redirection[i] = option;
                             save = true;

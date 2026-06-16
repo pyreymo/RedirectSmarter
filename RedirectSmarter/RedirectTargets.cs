@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using RedirectSmarter.Localization;
 
 namespace RedirectSmarter
 {
@@ -36,5 +37,26 @@ namespace RedirectSmarter
         ];
 
         public static readonly HashSet<string> Valid = [.. All];
+
+        public static string DisplayName(string target)
+        {
+            return target switch
+            {
+                Target => Loc.Text("RedirectTarget.Target"),
+                Focus => Loc.Text("RedirectTarget.Focus"),
+                TargetOfTarget => Loc.Text("RedirectTarget.TargetOfTarget"),
+                Self => Loc.Text("RedirectTarget.Self"),
+                SoftTarget => Loc.Text("RedirectTarget.SoftTarget"),
+                Chocobo => Loc.Text("RedirectTarget.Chocobo"),
+                Party2 => Loc.Text("RedirectTarget.Party2"),
+                Party3 => Loc.Text("RedirectTarget.Party3"),
+                Party4 => Loc.Text("RedirectTarget.Party4"),
+                Party5 => Loc.Text("RedirectTarget.Party5"),
+                Party6 => Loc.Text("RedirectTarget.Party6"),
+                Party7 => Loc.Text("RedirectTarget.Party7"),
+                Party8 => Loc.Text("RedirectTarget.Party8"),
+                _ => target,
+            };
+        }
     }
 }

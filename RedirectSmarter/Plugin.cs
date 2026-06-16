@@ -3,6 +3,7 @@ using Dalamud.Game.Command;
 using Dalamud.Interface.Windowing;
 using Dalamud.Plugin;
 using Dalamud.Plugin.Services;
+using RedirectSmarter.Localization;
 
 namespace RedirectSmarter
 {
@@ -25,6 +26,7 @@ namespace RedirectSmarter
         public Plugin(IDalamudPluginInterface i)
         {
             Services.Initialize(i);
+            Loc.Load(Interface);
 
             try
             {
@@ -51,11 +53,9 @@ namespace RedirectSmarter
             WindowSystem.AddWindow(PluginUi);
             WindowSystem.AddWindow(ConfigWindow);
 
-            CommandManager.AddHandler(
-                CommandName,
-                new CommandInfo(OnCommand) { HelpMessage = "Opens the configuration menu" }
-            );
+            RegisterCommand();
 
+            Interface.LanguageChanged += OnLanguageChanged;
             Interface.UiBuilder.Draw += OnDraw;
             Interface.UiBuilder.OpenMainUi += OpenMainUi;
             Interface.UiBuilder.OpenConfigUi += OpenConfigUi;
@@ -63,6 +63,7 @@ namespace RedirectSmarter
 
         public void Dispose()
         {
+            Interface.LanguageChanged -= OnLanguageChanged;
             Interface.UiBuilder.Draw -= OnDraw;
             Interface.UiBuilder.OpenMainUi -= OpenMainUi;
             Interface.UiBuilder.OpenConfigUi -= OpenConfigUi;
@@ -75,6 +76,23 @@ namespace RedirectSmarter
             Configuration.Save();
 
             CommandManager.RemoveHandler(CommandName);
+        }
+
+        private void RegisterCommand()
+        {
+            CommandManager.AddHandler(
+                CommandName,
+                new CommandInfo(OnCommand) { HelpMessage = Loc.Text("Command.OpenConfig") }
+            );
+        }
+
+        private void OnLanguageChanged(string langCode)
+        {
+            Loc.Load(Interface, langCode);
+            ConfigWindow.UpdateLanguage();
+
+            CommandManager.RemoveHandler(CommandName);
+            RegisterCommand();
         }
 
         private void OnCommand(string command, string args)

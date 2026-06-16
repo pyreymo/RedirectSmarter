@@ -2,6 +2,7 @@ using System;
 using System.Numerics;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface.Windowing;
+using RedirectSmarter.Localization;
 
 namespace RedirectSmarter
 {
@@ -10,7 +11,7 @@ namespace RedirectSmarter
         private Configuration Configuration { get; }
 
         public ConfigWindow(Configuration configuration)
-            : base($"{Plugin.Name} Settings")
+            : base(Loc.Text("Window.Settings"))
         {
             Configuration = configuration;
 
@@ -25,16 +26,21 @@ namespace RedirectSmarter
             IsOpen = !IsOpen;
         }
 
+        public void UpdateLanguage()
+        {
+            WindowName = Loc.Text("Window.Settings");
+        }
+
         public override void Draw()
         {
             DrawConfigCheckbox(
-                "Ignore range and target type errors",
+                Loc.Text("Config.IgnoreErrors"),
                 Configuration.IgnoreErrors,
                 value => Configuration.IgnoreErrors = value
             );
 
             DrawConfigCheckbox(
-                "Actions from macros",
+                Loc.Text("Config.ActionsFromMacros"),
                 Configuration.EnableMacroQueueing,
                 value => Configuration.EnableMacroQueueing = value
             );

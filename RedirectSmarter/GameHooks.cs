@@ -4,6 +4,7 @@ using Dalamud.Game.ClientState.Objects.Types;
 using Dalamud.Hooking;
 using Dalamud.Plugin.Services;
 using FFXIVClientStructs.FFXIV.Client.Game;
+using RedirectSmarter.Localization;
 using LuminaAction = Lumina.Excel.Sheets.Action;
 
 namespace RedirectSmarter
@@ -255,9 +256,11 @@ namespace RedirectSmarter
             ToastGui.ShowError(
                 error switch
                 {
-                    TargetValidationError.NotInLineOfSight => "Target not in line of sight.",
-                    TargetValidationError.NotInRange => "Target is not in range.",
-                    _ => "Invalid target.",
+                    TargetValidationError.NotInLineOfSight => Loc.Text(
+                        "Error.TargetNotInLineOfSight"
+                    ),
+                    TargetValidationError.NotInRange => Loc.Text("Error.TargetNotInRange"),
+                    _ => Loc.Text("Error.InvalidTarget"),
                 }
             );
         }
