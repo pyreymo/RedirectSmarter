@@ -16,9 +16,9 @@
 
 **Redirect Smarter** is a [Dalamud](https://github.com/goatcorp/Dalamud) plugin for Final Fantasy XIV Online.
 
-It redirects supported actions to explicitly configured targets. For each action, you can define a priority list using ordinary game targets such as your current target, focus target, yourself, your chocobo, or party slots.
+It redirects supported actions to explicitly configured targets. For each action, you can define a priority list using ordinary game targets such as your current target, focus target, yourself, soft target, party slots, or a dynamic target selector.
 
-When the action is used, Redirect Smarter tries those targets from left to right. The first resolved target that passes validation is used. If no configured target succeeds, the action falls back to the game's original target.
+When the action is used, Redirect Smarter tries those targets from left to right. The first resolved target that passes validation is used. If no configured target succeeds, the action falls back to the game's original target unless that action has `Prevent default` enabled.
 
 The current goal is simple: make action targeting more predictable without turning the plugin into rotation automation.
 
@@ -29,6 +29,9 @@ Redirect Smarter currently provides:
 - Per-action target priority lists.
 - Basic target validation for range, line of sight, and target type.
 - Optional skipping of invalid configured targets.
+- Per-action `Prevent default` behavior when no configured target is usable.
+- A global redirect enable/disable switch.
+- A dynamic lowest-HP party member selector.
 - Optional macro action queueing.
 
 Redirect Smarter does not currently provide:
@@ -36,7 +39,7 @@ Redirect Smarter does not currently provide:
 - Mouseover targeting.
 - Ground-targeted action placement.
 - Automatic rotation logic.
-- Smart target selectors such as lowest HP, dispellable status, or enemy-density targeting.
+- Additional smart target selectors such as dispellable status or enemy-density targeting.
 
 ## Installation
 
@@ -44,16 +47,26 @@ This plugin is currently available through the Dalamud plugin installer.
 
 ## Command
 
-Use `/rs` to open the configuration window.
+Use `/rs` to open or close the main window.
+
+Use `/rs toggle` to enable or disable redirects globally. The main window title also shows the current redirect state.
 
 ## Configuration
 
-The main window lists supported actions by job. Select a job or role actions, find an action, then press the add button to create target priority entries for that action.
+The main window has two tabs:
 
-Targets are tried from left to right. The first resolved target that passes range, line-of-sight, and target-type checks is used. If no configured target succeeds, the action continues with the game's original target.
+- `Actions`: Configure per-action redirect behavior.
+- `Settings`: Configure global plugin behavior.
 
-The settings window contains:
+The `Actions` tab lists supported actions by job. Select a job or role actions, find an action, then press the add button to create target priority entries for that action.
 
+Targets are tried from left to right. The first resolved target that passes range, line-of-sight, and target-type checks is used. If no configured target succeeds, the action continues with the game's original target unless `Prevent default` is enabled for that action.
+
+Each action row also has a `Prevent default` checkbox. When enabled, the action is blocked if none of its configured redirect targets are available.
+
+The `Settings` tab contains:
+
+- `Enable redirects`: Turns all redirect behavior on or off.
 - `Ignore range and target type errors`: When enabled, invalid configured targets are skipped and the plugin tries the next target in the priority list. When disabled, the first invalid resolved target stops the action and shows an error.
 - `Actions from macros`: Allows eligible macro actions to enter the game's normal action queue path more like actions used from the hotbar.
 
@@ -66,8 +79,14 @@ The following explicit target options are currently supported:
 - `Target of Target`: Your target's target.
 - `Self`: The player.
 - `Soft Target`: Your current soft target.
-- `Chocobo`: Your chocobo companion.
 - `<2>` through `<8>`: Party member 2-8.
+- `Lowest HP Party Member`: The living party member with the lowest HP percentage, only if that member is not at full HP. If everyone is full HP, this selector returns no target.
+
+## Custom Macro Placeholders
+
+`Lowest HP Party Member` is also registered as the custom placeholder `<lowhp>`.
+
+Custom placeholder support is experimental and only applies to game paths that call the placeholder resolver directly. For action redirection, prefer choosing `Lowest HP Party Member` from the Redirect Smarter target list.
 
 ## Macro Queueing
 
@@ -85,11 +104,10 @@ With macro queueing enabled, actions from a macro can behave more like hotbar ac
 
 ## Development Direction
 
-The current implementation deliberately keeps target resolution simple and explicit. That makes the next layer easier to add: target providers that compute a target dynamically.
+The current implementation supports both explicit target names and target providers that compute a target dynamically.
 
 Likely future target providers include:
 
-- Lowest-health party member.
 - Party member with a dispellable status.
 - Party member missing a specific buff.
 - Best enemy target by nearby enemy density.
@@ -103,7 +121,8 @@ The current code is split around those boundaries:
 
 - `ActionCatalog` builds the list of configurable actions.
 - `ActionExtensions` owns action capability and target validation helpers.
-- `RedirectTargets` defines the currently supported explicit target names.
-- `TargetResolver` maps target names to game objects.
-- `GameHooks` owns the action-use hook, macro-origin normalization, and configured target application.
+- `RedirectTargets` defines available target definitions and display names.
+- `TargetResolver` maps target names and custom macro placeholders to target selectors.
+- `GameHooks` owns the action-use hook, macro-origin normalization, configured target application, and prevent-default behavior.
+- `MacroPlaceholderHook` owns custom placeholder resolution.
 - `Configuration` stores user settings and prunes unsupported target names from older configs.
