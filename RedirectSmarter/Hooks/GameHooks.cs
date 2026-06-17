@@ -1,5 +1,4 @@
 using System;
-using System.Numerics;
 using Dalamud.Game.ClientState.Objects.Types;
 using Dalamud.Hooking;
 using Dalamud.Plugin.Services;
@@ -9,32 +8,62 @@ using RedirectSmarter.Configuration;
 using RedirectSmarter.Localization;
 using RedirectSmarter.Targeting;
 using LuminaAction = Lumina.Excel.Sheets.Action;
+using UseActionMode = FFXIVClientStructs.FFXIV.Client.Game.ActionManager.UseActionMode;
 
 namespace RedirectSmarter.Hooks
 {
     internal class GameHooks : IDisposable
     {
-        private const uint BarOrigin = 0;
-        private const uint QueueOrigin = 1;
-        private const uint MacroOrigin = 2;
-
         private readonly PluginConfiguration configuration;
         private readonly ActionCatalog actionCatalog;
         private readonly TargetResolver targetResolver = new();
         private static IToastGui ToastGui => Services.ToastGui;
 
-        private unsafe delegate bool TryActionDelegate(
+        private unsafe delegate bool UseActionDelegate(
             IntPtr actionManager,
             ActionType actionType,
             uint actionId,
             ulong targetId,
-            uint param,
-            uint origin,
-            uint unk,
-            Vector3* location
+            uint extraParam,
+            UseActionMode mode,
+            uint comboRouteId,
+            bool* outOptAreaTargeted
         );
 
-        private readonly Hook<TryActionDelegate> useActionHook;
+        private readonly Hook<UseActionDelegate> useActionHook;
+
+        private readonly unsafe ref struct UseActionContext(
+            IntPtr actionManager,
+            ActionType actionType,
+            uint actionId,
+            ulong targetId,
+            uint extraParam,
+            UseActionMode mode,
+            uint comboRouteId,
+            bool* outOptAreaTargeted
+        )
+        {
+            public IntPtr ActionManager { get; } = actionManager;
+            public ActionType ActionType { get; } = actionType;
+            public uint ActionId { get; } = actionId;
+            public ulong TargetId { get; } = targetId;
+            public uint ExtraParam { get; } = extraParam;
+            public UseActionMode Mode { get; } = mode;
+            public uint ComboRouteId { get; } = comboRouteId;
+            public bool* OutOptAreaTargeted { get; } = outOptAreaTargeted;
+
+            public UseActionContext WithMode(UseActionMode mode) =>
+                new(
+                    ActionManager,
+                    ActionType,
+                    ActionId,
+                    TargetId,
+                    ExtraParam,
+                    mode,
+                    ComboRouteId,
+                    OutOptAreaTargeted
+                );
+        }
 
         public GameHooks(PluginConfiguration configuration, ActionCatalog actions)
         {
@@ -43,10 +72,7 @@ namespace RedirectSmarter.Hooks
 
             unsafe
             {
-                useActionHook = Services.InteropProvider.HookFromAddress<TryActionDelegate>(
-                    (IntPtr)ActionManager.MemberFunctionPointers.UseAction,
-                    UseActionCallback
-                );
+                useActionHook = CreateUseActionHook();
             }
 
             useActionHook.Enable();
@@ -57,56 +83,40 @@ namespace RedirectSmarter.Hooks
             ActionType actionType,
             uint actionId,
             ulong targetId,
-            uint param,
-            uint origin,
-            uint unk,
-            Vector3* location
+            uint extraParam,
+            UseActionMode mode,
+            uint comboRouteId,
+            bool* outOptAreaTargeted
         )
         {
+            var context = new UseActionContext(
+                actionManager,
+                actionType,
+                actionId,
+                targetId,
+                extraParam,
+                mode,
+                comboRouteId,
+                outOptAreaTargeted
+            );
+
             if (actionType != ActionType.Action)
             {
-                return ContinueOriginal(
-                    actionManager,
-                    actionType,
-                    actionId,
-                    targetId,
-                    param,
-                    origin,
-                    unk,
-                    location
-                );
+                return ContinueOriginal(context);
             }
 
             if (!actionCatalog.IsReady)
             {
-                return ContinueOriginal(
-                    actionManager,
-                    actionType,
-                    actionId,
-                    targetId,
-                    param,
-                    origin,
-                    unk,
-                    location
-                );
+                return ContinueOriginal(context);
             }
 
             var requestedAction = actionCatalog.GetRow(actionId);
             if (requestedAction.IsPvP)
             {
-                return ContinueOriginal(
-                    actionManager,
-                    actionType,
-                    actionId,
-                    targetId,
-                    param,
-                    origin,
-                    unk,
-                    location
-                );
+                return ContinueOriginal(context);
             }
 
-            origin = NormalizeOrigin(origin);
+            context = context.WithMode(GetModeWithMacroQueueing(mode));
 
             var adjustedActionId = ActionManager.MemberFunctionPointers.GetAdjustedActionId(
                 (ActionManager*)actionManager,
@@ -114,61 +124,49 @@ namespace RedirectSmarter.Hooks
             );
             var adjustedAction = actionCatalog.GetRow(adjustedActionId);
 
-            if (!ShouldRedirect(adjustedAction, origin))
+            if (!ShouldRedirect(adjustedAction, context.Mode))
             {
-                return ContinueOriginal(
-                    actionManager,
-                    actionType,
-                    actionId,
-                    targetId,
-                    param,
-                    origin,
-                    unk,
-                    location
-                );
+                return ContinueOriginal(context);
             }
 
             var configurationId = GetConfigurationId(requestedAction, adjustedAction);
             if (
                 configuration.Redirections.TryGetValue(configurationId, out var redirection)
-                && TryUseConfiguredTarget(
-                    actionManager,
-                    actionType,
-                    actionId,
-                    targetId,
-                    param,
-                    origin,
-                    unk,
-                    location,
-                    adjustedAction,
-                    redirection,
-                    out var result
-                )
+                && TryUseConfiguredTarget(context, adjustedAction, redirection, out var result)
             )
             {
                 return result;
             }
 
-            return ContinueOriginal(
-                actionManager,
-                actionType,
-                actionId,
-                targetId,
-                param,
-                origin,
-                unk,
-                location
+            return ContinueOriginal(context);
+        }
+
+        private unsafe Hook<UseActionDelegate> CreateUseActionHook()
+        {
+            return Services.InteropProvider.HookFromAddress<UseActionDelegate>(
+                (IntPtr)ActionManager.MemberFunctionPointers.UseAction,
+                UseActionCallback
             );
         }
 
-        private uint NormalizeOrigin(uint origin)
+        private UseActionMode GetModeWithMacroQueueing(UseActionMode mode)
         {
-            return origin == MacroOrigin && configuration.EnableMacroQueueing ? BarOrigin : origin;
+            if (!configuration.EnableMacroQueueing)
+            {
+                return mode;
+            }
+
+            if (mode == UseActionMode.Macro)
+            {
+                return UseActionMode.None;
+            }
+
+            return mode;
         }
 
-        private static bool ShouldRedirect(LuminaAction adjustedAction, uint origin)
+        private static bool ShouldRedirect(LuminaAction adjustedAction, UseActionMode mode)
         {
-            return origin != QueueOrigin && adjustedAction.HasConfigurableTarget();
+            return mode != UseActionMode.Queue && adjustedAction.HasConfigurableTarget();
         }
 
         private static uint GetConfigurationId(
@@ -179,15 +177,8 @@ namespace RedirectSmarter.Hooks
             return adjustedAction.IsPlayerAction ? adjustedAction.RowId : requestedAction.RowId;
         }
 
-        private unsafe bool TryUseConfiguredTarget(
-            IntPtr actionManager,
-            ActionType actionType,
-            uint actionId,
-            ulong originalTargetId,
-            uint param,
-            uint origin,
-            uint unk,
-            Vector3* location,
+        private bool TryUseConfiguredTarget(
+            UseActionContext context,
             LuminaAction adjustedAction,
             Redirection redirection,
             out bool result
@@ -203,16 +194,7 @@ namespace RedirectSmarter.Hooks
 
                 if (IsUsableTarget(adjustedAction, resolvedTarget, out var error))
                 {
-                    result = ContinueOriginal(
-                        actionManager,
-                        actionType,
-                        actionId,
-                        resolvedTarget.GameObjectId,
-                        param,
-                        origin,
-                        unk,
-                        location
-                    );
+                    result = ContinueOriginal(context, resolvedTarget.GameObjectId);
                     return true;
                 }
 
@@ -224,16 +206,7 @@ namespace RedirectSmarter.Hooks
                 }
             }
 
-            result = ContinueOriginal(
-                actionManager,
-                actionType,
-                actionId,
-                originalTargetId,
-                param,
-                origin,
-                unk,
-                location
-            );
+            result = ContinueOriginal(context);
             return true;
         }
 
@@ -268,26 +241,20 @@ namespace RedirectSmarter.Hooks
             );
         }
 
-        private unsafe bool ContinueOriginal(
-            IntPtr actionManager,
-            ActionType actionType,
-            uint actionId,
-            ulong targetId,
-            uint param,
-            uint origin,
-            uint unk,
-            Vector3* location
-        )
+        private bool ContinueOriginal(UseActionContext context) =>
+            ContinueOriginal(context, context.TargetId);
+
+        private unsafe bool ContinueOriginal(UseActionContext context, ulong targetId)
         {
             return useActionHook.Original(
-                actionManager,
-                actionType,
-                actionId,
+                context.ActionManager,
+                context.ActionType,
+                context.ActionId,
                 targetId,
-                param,
-                origin,
-                unk,
-                location
+                context.ExtraParam,
+                context.Mode,
+                context.ComboRouteId,
+                context.OutOptAreaTargeted
             );
         }
 

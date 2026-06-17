@@ -2,12 +2,12 @@
   "Window.Settings": "Redirect Smarter Settings",
   "Tooltip.Settings": "Settings",
   "Command.OpenConfig": "Opens the configuration menu",
-  "Config.IgnoreErrors": "Ignore range and target type errors",
-  "Config.ActionsFromMacros": "Actions from macros",
+  "Config.IgnoreErrors": "Hide range and target type error toasts",
+  "Config.ActionsFromMacros": "Allow actions from macros to queue",
   "Section.Jobs": "Jobs",
   "Section.RoleActions": "Role Actions",
   "Section.Actions": "Actions",
-  "Empty.SelectJob": "Select a job to get started.",
+  "Empty.SelectJob": "Select a job to get started",
   "Action.Count": "{0} actions",
   "Search.Actions": "Search actions",
   "Table.Action": "Action",
@@ -27,7 +27,7 @@
   "RedirectTarget.Party6": "Party 6",
   "RedirectTarget.Party7": "Party 7",
   "RedirectTarget.Party8": "Party 8",
-  "Error.TargetNotInLineOfSight": "Target not in line of sight.",
-  "Error.TargetNotInRange": "Target is not in range.",
-  "Error.InvalidTarget": "Invalid target."
+  "Error.TargetNotInLineOfSight": "Target not in line of sight",
+  "Error.TargetNotInRange": "Target is not in range",
+  "Error.InvalidTarget": "Invalid target"
 }
