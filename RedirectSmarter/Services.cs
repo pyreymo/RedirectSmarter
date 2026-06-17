@@ -28,6 +28,9 @@ namespace RedirectSmarter
         public static IObjectTable ObjectTable { get; private set; } = null!;
 
         [PluginService]
+        public static IPartyList PartyList { get; private set; } = null!;
+
+        [PluginService]
         public static IToastGui ToastGui { get; private set; } = null!;
 
         [PluginService]

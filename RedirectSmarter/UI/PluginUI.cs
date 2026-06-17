@@ -300,17 +300,17 @@ namespace RedirectSmarter.UI
                     )
                 )
                 {
-                    foreach (var option in RedirectTargets.All)
+                    foreach (var option in RedirectTargets.Definitions)
                     {
-                        var selected = option == redirection[i];
+                        var selected = option.Id == redirection[i];
                         if (
                             ImGui.Selectable(
-                                $"{RedirectTargets.DisplayName(option)}##{option}",
+                                $"{RedirectTargets.DisplayName(option.Id)}##{option.Id}",
                                 selected
                             )
                         )
                         {
-                            redirection[i] = option;
+                            redirection[i] = option.Id;
                             save = true;
                         }
 

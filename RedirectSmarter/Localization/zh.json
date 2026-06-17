@@ -26,6 +26,7 @@
   "RedirectTarget.Party6": "小队 6",
   "RedirectTarget.Party7": "小队 7",
   "RedirectTarget.Party8": "小队 8",
+  "RedirectTarget.LowestHpTeammate": "最低血量百分比队友",
   "Error.TargetNotInLineOfSight": "目标不在视线内",
   "Error.TargetNotInRange": "目标超出距离",
   "Error.InvalidTarget": "无效目标"

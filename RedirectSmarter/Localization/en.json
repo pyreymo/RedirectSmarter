@@ -26,6 +26,7 @@
   "RedirectTarget.Party6": "Party 6",
   "RedirectTarget.Party7": "Party 7",
   "RedirectTarget.Party8": "Party 8",
+  "RedirectTarget.LowestHpTeammate": "Lowest HP Teammate",
   "Error.TargetNotInLineOfSight": "Target not in line of sight",
   "Error.TargetNotInRange": "Target is not in range",
   "Error.InvalidTarget": "Invalid target"
