@@ -18,7 +18,6 @@ namespace RedirectSmarter.Targeting
                 RedirectTargets.Focus => TargetManager.FocusTarget,
                 RedirectTargets.TargetOfTarget => TargetManager.Target?.TargetObject,
                 RedirectTargets.SoftTarget => TargetManager.SoftTarget,
-                RedirectTargets.Chocobo => ResolvePlaceholder("<b>"),
                 RedirectTargets.Party2 => ResolvePlaceholder(RedirectTargets.Party2),
                 RedirectTargets.Party3 => ResolvePlaceholder(RedirectTargets.Party3),
                 RedirectTargets.Party4 => ResolvePlaceholder(RedirectTargets.Party4),

@@ -10,7 +10,6 @@ namespace RedirectSmarter.Targeting
         public const string TargetOfTarget = "Target of Target";
         public const string Self = "Self";
         public const string SoftTarget = "Soft Target";
-        public const string Chocobo = "Chocobo";
         public const string Party2 = "<2>";
         public const string Party3 = "<3>";
         public const string Party4 = "<4>";
@@ -26,7 +25,6 @@ namespace RedirectSmarter.Targeting
             TargetOfTarget,
             Self,
             SoftTarget,
-            Chocobo,
             Party2,
             Party3,
             Party4,
@@ -47,7 +45,6 @@ namespace RedirectSmarter.Targeting
                 TargetOfTarget => Loc.Text("RedirectTarget.TargetOfTarget"),
                 Self => Loc.Text("RedirectTarget.Self"),
                 SoftTarget => Loc.Text("RedirectTarget.SoftTarget"),
-                Chocobo => Loc.Text("RedirectTarget.Chocobo"),
                 Party2 => Loc.Text("RedirectTarget.Party2"),
                 Party3 => Loc.Text("RedirectTarget.Party3"),
                 Party4 => Loc.Text("RedirectTarget.Party4"),
