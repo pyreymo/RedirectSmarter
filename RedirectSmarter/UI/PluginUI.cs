@@ -21,8 +21,8 @@ namespace RedirectSmarter.UI
         private const uint MaxRedirects = 12;
         private const float JobListWidth = 140f;
         private const float RedirectComboWidth = 135f;
+        private const string WindowId = "RedirectSmarter.Main";
 
-        private System.Action ToggleConfigWindow { get; }
         private PluginConfiguration Configuration { get; }
         private ActionCatalog ActionCatalog { get; }
 
@@ -31,37 +31,78 @@ namespace RedirectSmarter.UI
         private bool selectedRoleActions;
         private uint selectedJob;
         private string search = string.Empty;
+        private MainTab? requestedTab;
 
-        public PluginUI(
-            PluginConfiguration config,
-            ActionCatalog actions,
-            System.Action toggleConfigWindow
-        )
+        private enum MainTab
+        {
+            Actions,
+            Settings,
+        }
+
+        public PluginUI(PluginConfiguration config, ActionCatalog actions)
             : base(Plugin.Name)
         {
             Configuration = config;
             ActionCatalog = actions;
-            ToggleConfigWindow = toggleConfigWindow;
 
             Size = new Vector2(760, 560);
             SizeCondition = ImGuiCond.FirstUseEver;
-
-            TitleBarButtons.Add(
-                new TitleBarButton
-                {
-                    Icon = FontAwesomeIcon.Cog,
-                    IconOffset = new Vector2(2, 1),
-                    Click = _ => ToggleConfigWindow(),
-                    ShowTooltip = () => ImGui.SetTooltip(Loc.Text("Tooltip.Settings")),
-                }
-            );
+            UpdateWindowTitle();
         }
 
         public void Dispose() { }
 
         public override void Draw()
         {
-            DrawMainLayout();
+            UpdateWindowTitle();
+
+            if (!ImGui.BeginTabBar("main-tabs"))
+            {
+                return;
+            }
+
+            if (ImGui.BeginTabItem(Loc.Text("Tab.Actions"), GetTabFlags(MainTab.Actions)))
+            {
+                DrawMainLayout();
+                ImGui.EndTabItem();
+            }
+
+            if (ImGui.BeginTabItem(Loc.Text("Tab.Settings"), GetTabFlags(MainTab.Settings)))
+            {
+                DrawSettings();
+                ImGui.EndTabItem();
+            }
+
+            ImGui.EndTabBar();
+            requestedTab = null;
+        }
+
+        public void OpenSettings()
+        {
+            requestedTab = MainTab.Settings;
+            IsOpen = true;
+        }
+
+        public void ToggleSettings()
+        {
+            requestedTab = MainTab.Settings;
+            Toggle();
+        }
+
+        public void UpdateLanguage()
+        {
+            UpdateWindowTitle();
+        }
+
+        private void UpdateWindowTitle()
+        {
+            WindowName =
+                $"{Plugin.Name} - {Loc.Text(Configuration.EnableRedirects ? "Status.Enabled" : "Status.Disabled")}###{WindowId}";
+        }
+
+        private ImGuiTabItemFlags GetTabFlags(MainTab tab)
+        {
+            return requestedTab == tab ? ImGuiTabItemFlags.SetSelected : ImGuiTabItemFlags.None;
         }
 
         private void DrawMainLayout()
@@ -182,13 +223,17 @@ namespace RedirectSmarter.UI
                 | ImGuiTableFlags.ScrollY
                 | ImGuiTableFlags.SizingFixedFit;
 
-            if (!ImGui.BeginTable("actions", 4, flags, new Vector2(0, 0)))
+            if (!ImGui.BeginTable("actions", 5, flags, new Vector2(0, 0)))
             {
                 return;
             }
 
             ImGui.TableSetupColumn("##icon", ImGuiTableColumnFlags.WidthFixed);
             ImGui.TableSetupColumn(Loc.Text("Table.Action"), ImGuiTableColumnFlags.WidthFixed);
+            ImGui.TableSetupColumn(
+                Loc.Text("Table.PreventDefault"),
+                ImGuiTableColumnFlags.WidthFixed
+            );
             ImGui.TableSetupColumn(Loc.Text("Table.Add"), ImGuiTableColumnFlags.WidthFixed);
             ImGui.TableSetupColumn(
                 Loc.Text("Table.RedirectPriority"),
@@ -230,12 +275,15 @@ namespace RedirectSmarter.UI
             ImGui.TextUnformatted(action.Name.ToString());
 
             ImGui.TableNextColumn();
+            save |= DrawPreventDefaultCheckbox(action.RowId, redirection);
+
+            ImGui.TableNextColumn();
             save |= DrawAddRedirectionButton(action.RowId, redirection);
 
             ImGui.TableNextColumn();
             save |= DrawRedirectionPriority(action, redirection);
 
-            if (redirection.Count > 0)
+            if (redirection.Count > 0 || redirection.PreventDefault)
             {
                 Configuration.Redirections[action.RowId] = redirection;
             }
@@ -245,6 +293,18 @@ namespace RedirectSmarter.UI
             }
 
             return save;
+        }
+
+        private static bool DrawPreventDefaultCheckbox(uint actionId, Redirection redirection)
+        {
+            var preventDefault = redirection.PreventDefault;
+            if (ImGui.Checkbox($"##prevent-default-{actionId}", ref preventDefault))
+            {
+                redirection.PreventDefault = preventDefault;
+                return true;
+            }
+
+            return false;
         }
 
         private bool DrawAddRedirectionButton(uint actionId, Redirection redirection)
@@ -358,6 +418,39 @@ namespace RedirectSmarter.UI
 
             var drawSize = size == default ? new Vector2(wrap.Width, wrap.Height) : size;
             ImGui.Image(wrap.Handle, drawSize);
+        }
+
+        private void DrawSettings()
+        {
+            DrawConfigCheckbox(
+                Loc.Text("Config.EnableRedirects"),
+                Configuration.EnableRedirects,
+                value => Configuration.EnableRedirects = value
+            );
+
+            DrawConfigCheckbox(
+                Loc.Text("Config.IgnoreErrors"),
+                Configuration.IgnoreErrors,
+                value => Configuration.IgnoreErrors = value
+            );
+
+            DrawConfigCheckbox(
+                Loc.Text("Config.ActionsFromMacros"),
+                Configuration.EnableMacroQueueing,
+                value => Configuration.EnableMacroQueueing = value
+            );
+        }
+
+        private void DrawConfigCheckbox(string label, bool currentValue, Action<bool> setValue)
+        {
+            var value = currentValue;
+
+            if (ImGui.Checkbox(label, ref value))
+            {
+                setValue(value);
+                Configuration.Save();
+                UpdateWindowTitle();
+            }
         }
     }
 }

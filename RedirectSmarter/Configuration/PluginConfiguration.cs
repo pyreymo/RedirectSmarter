@@ -10,6 +10,7 @@ namespace RedirectSmarter.Configuration
     public class PluginConfiguration : IPluginConfiguration
     {
         public int Version { get; set; } = 1;
+        public bool EnableRedirects { get; set; } = true;
         public bool EnableMacroQueueing { get; set; } = false;
         public bool IgnoreErrors { get; set; } = true;
         public string DefaultRedirection { get; set; } = RedirectTargets.Target;

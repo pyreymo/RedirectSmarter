@@ -1,5 +1,6 @@
 ﻿using System;
 using Dalamud.Game.Command;
+using Dalamud.Game.Gui.Toast;
 using Dalamud.Interface.Windowing;
 using Dalamud.Plugin;
 using Dalamud.Plugin.Services;
@@ -17,9 +18,9 @@ namespace RedirectSmarter
         private const string CommandName = "/rs";
         private PluginConfiguration Configuration { get; set; }
         private PluginUI PluginUi { get; } = null!;
-        private ConfigWindow ConfigWindow { get; } = null!;
         private ActionCatalog ActionCatalog { get; } = null!;
         private GameHooks Hooks { get; } = null!;
+        private MacroPlaceholderHook MacroPlaceholderHook { get; } = null!;
 
         private readonly WindowSystem WindowSystem = new(Name);
 
@@ -52,11 +53,10 @@ namespace RedirectSmarter
 
             ActionCatalog = new();
             Hooks = new(Configuration, ActionCatalog);
-            ConfigWindow = new ConfigWindow(Configuration);
-            PluginUi = new PluginUI(Configuration, ActionCatalog, ConfigWindow.Toggle);
+            MacroPlaceholderHook = new(Configuration);
+            PluginUi = new PluginUI(Configuration, ActionCatalog);
 
             WindowSystem.AddWindow(PluginUi);
-            WindowSystem.AddWindow(ConfigWindow);
 
             RegisterCommand();
 
@@ -76,8 +76,8 @@ namespace RedirectSmarter
             WindowSystem.RemoveAllWindows();
 
             Hooks.Dispose();
+            MacroPlaceholderHook.Dispose();
             PluginUi.Dispose();
-            ConfigWindow.Dispose();
             Configuration.Save();
 
             CommandManager.RemoveHandler(CommandName);
@@ -87,14 +87,14 @@ namespace RedirectSmarter
         {
             CommandManager.AddHandler(
                 CommandName,
-                new CommandInfo(OnCommand) { HelpMessage = Loc.Text("Command.OpenConfig") }
+                new CommandInfo(OnCommand) { HelpMessage = Loc.Text("Command.Help") }
             );
         }
 
         private void OnLanguageChanged(string langCode)
         {
             Loc.Load(Interface, langCode);
-            ConfigWindow.UpdateLanguage();
+            PluginUi.UpdateLanguage();
 
             CommandManager.RemoveHandler(CommandName);
             RegisterCommand();
@@ -102,7 +102,29 @@ namespace RedirectSmarter
 
         private void OnCommand(string command, string args)
         {
+            if (args.Trim().Equals("toggle", StringComparison.OrdinalIgnoreCase))
+            {
+                ToggleRedirects();
+                return;
+            }
+
             PluginUi.Toggle();
+        }
+
+        private void ToggleRedirects()
+        {
+            Configuration.EnableRedirects = !Configuration.EnableRedirects;
+            Configuration.Save();
+            PluginUi.UpdateLanguage();
+
+            Services.ToastGui.ShowNormal(
+                Loc.Text(
+                    Configuration.EnableRedirects
+                        ? "Command.RedirectsEnabled"
+                        : "Command.RedirectsDisabled"
+                ),
+                new ToastOptions { Speed = ToastSpeed.Fast }
+            );
         }
 
         private void OnDraw()
@@ -124,7 +146,7 @@ namespace RedirectSmarter
 
         private void OpenConfigUi()
         {
-            ConfigWindow.Toggle();
+            PluginUi.ToggleSettings();
         }
     }
 }

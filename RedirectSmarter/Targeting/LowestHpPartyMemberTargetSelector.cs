@@ -2,11 +2,10 @@ using Dalamud.Game.ClientState.Objects.Types;
 
 namespace RedirectSmarter.Targeting
 {
-    internal sealed class LowestHpTeammateTargetSelector : IRedirectTargetSelector
+    internal sealed class LowestHpPartyMemberTargetSelector : IRedirectTargetSelector
     {
         public IGameObject? Resolve()
         {
-            var localPlayer = Services.ObjectTable.LocalPlayer;
             IGameObject? lowestHpMember = null;
             var lowestHpPercent = double.MaxValue;
 
@@ -23,7 +22,7 @@ namespace RedirectSmarter.Targeting
                     continue;
                 }
 
-                if (localPlayer is not null && gameObject.GameObjectId == localPlayer.GameObjectId)
+                if (partyMember.CurrentHP >= partyMember.MaxHP)
                 {
                     continue;
                 }

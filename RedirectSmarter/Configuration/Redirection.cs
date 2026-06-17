@@ -9,6 +9,7 @@ namespace RedirectSmarter.Configuration
     {
         public uint ID { get; init; }
         public List<string> Priority { get; set; } = [];
+        public bool PreventDefault { get; set; } = false;
 
         [JsonIgnore]
         public int Count => Priority!.Count;

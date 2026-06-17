@@ -100,6 +100,11 @@ namespace RedirectSmarter.Hooks
                 outOptAreaTargeted
             );
 
+            if (!configuration.EnableRedirects)
+            {
+                return ContinueOriginal(context);
+            }
+
             if (actionType != ActionType.Action)
             {
                 return ContinueOriginal(context);
@@ -204,6 +209,17 @@ namespace RedirectSmarter.Hooks
                     result = false;
                     return true;
                 }
+            }
+
+            if (redirection.PreventDefault)
+            {
+                if (!configuration.IgnoreErrors)
+                {
+                    ToastGui.ShowError(Loc.Text("Error.NoRedirectTarget"));
+                }
+
+                result = false;
+                return true;
             }
 
             result = ContinueOriginal(context);

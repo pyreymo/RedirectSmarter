@@ -18,7 +18,8 @@ namespace RedirectSmarter.Targeting
         public const string Party6 = "<6>";
         public const string Party7 = "<7>";
         public const string Party8 = "<8>";
-        public const string LowestHpTeammate = "Lowest HP Teammate";
+        public const string LowestHpPartyMember = "Lowest HP Party Member";
+        public const string LowestHpPartyMemberPlaceholder = "<lowhp>";
 
         public static readonly IReadOnlyList<RedirectTargetDefinition> Definitions =
         [
@@ -55,9 +56,10 @@ namespace RedirectSmarter.Targeting
             new(Party7, "RedirectTarget.Party7", new PlaceholderTargetSelector(Party7)),
             new(Party8, "RedirectTarget.Party8", new PlaceholderTargetSelector(Party8)),
             new(
-                LowestHpTeammate,
-                "RedirectTarget.LowestHpTeammate",
-                new LowestHpTeammateTargetSelector()
+                LowestHpPartyMember,
+                "RedirectTarget.LowestHpPartyMember",
+                new LowestHpPartyMemberTargetSelector(),
+                LowestHpPartyMemberPlaceholder
             ),
         ];
 
