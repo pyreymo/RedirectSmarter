@@ -3,7 +3,7 @@ using Dalamud.Game.ClientState.Objects.Types;
 using Dalamud.Plugin.Services;
 using FFXIVClientStructs.FFXIV.Client.UI.Misc;
 
-namespace RedirectSmarter
+namespace RedirectSmarter.Targeting
 {
     internal class TargetResolver
     {

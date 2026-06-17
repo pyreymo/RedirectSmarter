@@ -1,4 +1,4 @@
-namespace RedirectSmarter
+namespace RedirectSmarter.Targeting
 {
     internal enum TargetValidationError
     {

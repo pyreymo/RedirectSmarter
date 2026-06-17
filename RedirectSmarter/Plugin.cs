@@ -3,7 +3,11 @@ using Dalamud.Game.Command;
 using Dalamud.Interface.Windowing;
 using Dalamud.Plugin;
 using Dalamud.Plugin.Services;
+using RedirectSmarter.Actions;
+using RedirectSmarter.Configuration;
+using RedirectSmarter.Hooks;
 using RedirectSmarter.Localization;
+using RedirectSmarter.UI;
 
 namespace RedirectSmarter
 {
@@ -11,7 +15,7 @@ namespace RedirectSmarter
     {
         public static string Name => "Redirect Smarter";
         private const string CommandName = "/rs";
-        private Configuration Configuration { get; set; }
+        private PluginConfiguration Configuration { get; set; }
         private PluginUI PluginUi { get; } = null!;
         private ConfigWindow ConfigWindow { get; } = null!;
         private ActionCatalog ActionCatalog { get; } = null!;
@@ -30,14 +34,15 @@ namespace RedirectSmarter
 
             try
             {
-                Configuration = Interface.GetPluginConfig() as Configuration ?? new Configuration();
+                Configuration =
+                    Interface.GetPluginConfig() as PluginConfiguration ?? new PluginConfiguration();
             }
             catch (Exception)
             {
                 Services.PluginLog.Error(
                     "Failed to load plugin configuration. A new configuration file has been created."
                 );
-                Configuration = new Configuration();
+                Configuration = new PluginConfiguration();
             }
 
             if (Configuration.PruneUnsupportedRedirections())

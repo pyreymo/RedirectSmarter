@@ -4,10 +4,13 @@ using Dalamud.Game.ClientState.Objects.Types;
 using Dalamud.Hooking;
 using Dalamud.Plugin.Services;
 using FFXIVClientStructs.FFXIV.Client.Game;
+using RedirectSmarter.Actions;
+using RedirectSmarter.Configuration;
 using RedirectSmarter.Localization;
+using RedirectSmarter.Targeting;
 using LuminaAction = Lumina.Excel.Sheets.Action;
 
-namespace RedirectSmarter
+namespace RedirectSmarter.Hooks
 {
     internal class GameHooks : IDisposable
     {
@@ -15,7 +18,7 @@ namespace RedirectSmarter
         private const uint QueueOrigin = 1;
         private const uint MacroOrigin = 2;
 
-        private readonly Configuration configuration;
+        private readonly PluginConfiguration configuration;
         private readonly ActionCatalog actionCatalog;
         private readonly TargetResolver targetResolver = new();
         private static IToastGui ToastGui => Services.ToastGui;
@@ -33,7 +36,7 @@ namespace RedirectSmarter
 
         private readonly Hook<TryActionDelegate> useActionHook;
 
-        public GameHooks(Configuration configuration, ActionCatalog actions)
+        public GameHooks(PluginConfiguration configuration, ActionCatalog actions)
         {
             this.configuration = configuration;
             actionCatalog = actions;

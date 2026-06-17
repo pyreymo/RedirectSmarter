@@ -4,7 +4,7 @@ using System.Threading.Tasks;
 using Lumina.Excel;
 using Lumina.Excel.Sheets;
 
-namespace RedirectSmarter
+namespace RedirectSmarter.Actions
 {
     internal class ActionCatalog
     {

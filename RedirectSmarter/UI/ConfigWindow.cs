@@ -2,15 +2,16 @@ using System;
 using System.Numerics;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface.Windowing;
+using RedirectSmarter.Configuration;
 using RedirectSmarter.Localization;
 
-namespace RedirectSmarter
+namespace RedirectSmarter.UI
 {
     class ConfigWindow : Window, IDisposable
     {
-        private Configuration Configuration { get; }
+        private PluginConfiguration Configuration { get; }
 
-        public ConfigWindow(Configuration configuration)
+        public ConfigWindow(PluginConfiguration configuration)
             : base(Loc.Text("Window.Settings"))
         {
             Configuration = configuration;

@@ -7,10 +7,13 @@ using Dalamud.Interface;
 using Dalamud.Interface.Textures;
 using Dalamud.Interface.Windowing;
 using Lumina.Excel.Sheets;
+using RedirectSmarter.Actions;
+using RedirectSmarter.Configuration;
 using RedirectSmarter.Localization;
+using RedirectSmarter.Targeting;
 using LuminaAction = Lumina.Excel.Sheets.Action;
 
-namespace RedirectSmarter
+namespace RedirectSmarter.UI
 {
     class PluginUI : Window, IDisposable
     {
@@ -20,7 +23,7 @@ namespace RedirectSmarter
         private const float RedirectComboWidth = 135f;
 
         private System.Action ToggleConfigWindow { get; }
-        private Configuration Configuration { get; }
+        private PluginConfiguration Configuration { get; }
         private ActionCatalog ActionCatalog { get; }
 
         private List<uint> Jobs => ActionCatalog.GetJobInfo();
@@ -30,7 +33,7 @@ namespace RedirectSmarter
         private string search = string.Empty;
 
         public PluginUI(
-            Configuration config,
+            PluginConfiguration config,
             ActionCatalog actions,
             System.Action toggleConfigWindow
         )

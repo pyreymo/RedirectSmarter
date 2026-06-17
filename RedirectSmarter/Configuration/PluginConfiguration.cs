@@ -2,11 +2,12 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Dalamud.Configuration;
+using RedirectSmarter.Targeting;
 
-namespace RedirectSmarter
+namespace RedirectSmarter.Configuration
 {
     [Serializable]
-    public class Configuration : IPluginConfiguration
+    public class PluginConfiguration : IPluginConfiguration
     {
         public int Version { get; set; } = 1;
         public bool EnableMacroQueueing { get; set; } = false;

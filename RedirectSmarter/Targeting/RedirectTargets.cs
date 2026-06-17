@@ -1,7 +1,7 @@
 using System.Collections.Generic;
 using RedirectSmarter.Localization;
 
-namespace RedirectSmarter
+namespace RedirectSmarter.Targeting
 {
     internal static class RedirectTargets
     {
