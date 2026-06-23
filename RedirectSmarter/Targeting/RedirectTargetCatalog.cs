@@ -99,6 +99,13 @@ namespace RedirectSmarter.Targeting
                     RedirectTargets.LowestHpPartyMemberPlaceholder,
                     LowestHpPartyMemberTargetSelector.Parameters
                 ),
+                new(
+                    RedirectTargets.AoeEnemy,
+                    "RedirectTarget.AoeEnemy",
+                    new AoeEnemyTargetSelector(),
+                    RedirectTargets.AoeEnemyPlaceholder,
+                    AoeEnemyTargetSelector.Parameters
+                ),
             ];
 
         private static string NormalizeMacroPlaceholder(string placeholder)

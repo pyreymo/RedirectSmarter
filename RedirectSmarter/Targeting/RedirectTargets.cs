@@ -19,5 +19,7 @@ namespace RedirectSmarter.Targeting
         public const string Party8 = "<8>";
         public const string LowestHpPartyMember = "Lowest HP Party Member";
         public const string LowestHpPartyMemberPlaceholder = "<lowhp>";
+        public const string AoeEnemy = "AoE Enemy";
+        public const string AoeEnemyPlaceholder = "<aoe>";
     }
 }

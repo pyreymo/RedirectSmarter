@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Globalization;
 
 namespace RedirectSmarter.Targeting.Parameters
@@ -11,9 +12,26 @@ namespace RedirectSmarter.Targeting.Parameters
         int Min = int.MinValue,
         int Max = int.MaxValue,
         string? Suffix = null,
-        bool AllowPositional = false
+        bool AllowPositional = false,
+        IReadOnlyList<string>? Aliases = null
     )
     {
+        public IReadOnlyList<string> Aliases { get; init; } = Aliases ?? [];
+
+        public bool MatchesName(string name)
+        {
+            if (Name.Equals(name, StringComparison.OrdinalIgnoreCase))
+                return true;
+
+            foreach (var alias in Aliases)
+            {
+                if (alias.Equals(name, StringComparison.OrdinalIgnoreCase))
+                    return true;
+            }
+
+            return false;
+        }
+
         public bool TryNormalize(string value, out string normalizedValue)
         {
             normalizedValue = DefaultValue;

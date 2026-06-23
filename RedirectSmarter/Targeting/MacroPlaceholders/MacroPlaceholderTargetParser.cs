@@ -137,7 +137,7 @@ namespace RedirectSmarter.Targeting.MacroPlaceholders
         {
             foreach (var candidate in definitions)
             {
-                if (candidate.Name.Equals(name, StringComparison.OrdinalIgnoreCase))
+                if (candidate.MatchesName(name))
                 {
                     definition = candidate;
                     return true;

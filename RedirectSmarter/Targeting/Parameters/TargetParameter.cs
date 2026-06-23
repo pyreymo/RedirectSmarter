@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.Globalization;
 
 namespace RedirectSmarter.Targeting.Parameters
@@ -11,7 +12,8 @@ namespace RedirectSmarter.Targeting.Parameters
             int min = int.MinValue,
             int max = int.MaxValue,
             string? suffix = null,
-            bool allowPositional = false
+            bool allowPositional = false,
+            IReadOnlyList<string>? aliases = null
         )
         {
             return new TargetParameterDefinition(
@@ -22,17 +24,24 @@ namespace RedirectSmarter.Targeting.Parameters
                 min,
                 max,
                 suffix,
-                allowPositional
+                allowPositional,
+                aliases
             );
         }
 
-        public static TargetParameterDefinition Bool(string name, string displayNameKey, bool defaultValue)
+        public static TargetParameterDefinition Bool(
+            string name,
+            string displayNameKey,
+            bool defaultValue,
+            IReadOnlyList<string>? aliases = null
+        )
         {
             return new TargetParameterDefinition(
                 name,
                 displayNameKey,
                 TargetParameterKind.Bool,
-                defaultValue.ToString().ToLowerInvariant()
+                defaultValue.ToString().ToLowerInvariant(),
+                Aliases: aliases
             );
         }
     }

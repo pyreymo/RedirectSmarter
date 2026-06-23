@@ -33,10 +33,9 @@ namespace RedirectSmarter.Targeting.Parameters
             var normalizedParameters = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
             foreach (var definition in definitions)
             {
-                var value =
-                    parameters is not null && parameters.TryGetValue(definition.Name, out var configuredValue)
-                        ? configuredValue
-                        : definition.DefaultValue;
+                var value = TryGetConfiguredValue(parameters, definition, out var configuredValue)
+                    ? configuredValue
+                    : definition.DefaultValue;
 
                 normalizedParameters[definition.Name] = definition.TryNormalize(value, out var normalizedValue)
                     ? normalizedValue
@@ -44,6 +43,29 @@ namespace RedirectSmarter.Targeting.Parameters
             }
 
             return new TargetSelectionContext(normalizedParameters);
+        }
+
+        private static bool TryGetConfiguredValue(
+            IReadOnlyDictionary<string, string>? parameters,
+            TargetParameterDefinition definition,
+            out string value
+        )
+        {
+            value = string.Empty;
+
+            if (parameters is null)
+                return false;
+
+            foreach (var (name, configuredValue) in parameters)
+            {
+                if (!definition.MatchesName(name))
+                    continue;
+
+                value = configuredValue;
+                return true;
+            }
+
+            return false;
         }
     }
 }

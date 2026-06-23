@@ -81,19 +81,26 @@ The following explicit target options are currently supported:
 - `Soft Target`: Your current soft target.
 - `<2>` through `<8>`: Party member 2-8.
 - `Lowest HP Party Member`: The living party member with the lowest HP percentage, only if that member is below the configured HP threshold. If no target qualifies, this selector returns no target unless its self option can select the damaged local player.
+- `AoE Enemy`: A hostile combatant that is a good target anchor for enemy-targeted circular AoE actions. It does not search arbitrary ground positions.
 
 ## Custom Macro Placeholders
 
 `Lowest HP Party Member` is also registered as the custom placeholder `<lowhp>`.
 `<lowhp>` is equivalent to `<lowhp:100>` and only chooses targets below full HP.
 
-The placeholder also supports a small parameter syntax:
+`AoE Enemy` is registered as the custom placeholder `<aoe>`.
+
+These placeholders support a small parameter syntax:
 
 - `<lowhp:80>`: Shorthand for `<lowhp:below=80>`.
 - `<lowhp:below=80>`: Only chooses targets below 80% HP.
 - `<lowhp:80:self=false>`: Only chooses targets below 80% HP and does not target the local player.
+- `<aoe>`: Chooses an enemy target anchor using radius 5, minimum 2 targets, and max range 30.
+- `<aoe:r=5>`: Chooses with an AoE radius of 5 yalms. `radius=5` is also accepted.
+- `<aoe:r=8:min=3>`: Requires at least 3 enemies in the radius.
+- `<aoe:r=8:min=3:maxRange=25>`: Limits selectable target anchors to 25 yalms from the player.
 
-Only the first HP threshold may be positional. Use named arguments for anything else; `<lowhp:80:false>` is intentionally not supported.
+Only parameters declared as positional accept bare values, such as `<lowhp:80>` and `<aoe:5>`. Use named arguments for anything else; `<lowhp:80:false>` is intentionally not supported.
 
 Custom placeholder support is experimental and only applies to game paths that call the placeholder resolver directly. For action redirection, prefer choosing `Lowest HP Party Member` from the Redirect Smarter target list, where the same threshold and self-target behavior can be configured in the main UI.
 
