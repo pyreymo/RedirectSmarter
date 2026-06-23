@@ -16,9 +16,7 @@ namespace RedirectSmarter.Targeting
             }
             catch (Exception ex)
             {
-                Services.PluginLog.Error(
-                    $"Unable to resolve placeholder ({placeholder}): {ex.Message}"
-                );
+                Services.PluginLog.Error($"Unable to resolve placeholder ({placeholder}): {ex.Message}");
                 return null;
             }
         }

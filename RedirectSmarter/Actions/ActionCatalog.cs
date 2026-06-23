@@ -19,8 +19,7 @@ namespace RedirectSmarter.Actions
 
         public List<uint> GetJobInfo() => initialized ? jobIds : [];
 
-        public IEnumerable<Action> GetJobActions(uint job) =>
-            initialized && jobActions.TryGetValue(job, out var actions) ? actions : [];
+        public IEnumerable<Action> GetJobActions(uint job) => initialized && jobActions.TryGetValue(job, out var actions) ? actions : [];
 
         public IEnumerable<Action> GetRoleActions() => initialized ? roleActions : [];
 
@@ -28,7 +27,11 @@ namespace RedirectSmarter.Actions
 
         public ActionCatalog()
         {
-            Task.Run(Initialize);
+            Task.Run(Initialize)
+                .ContinueWith(
+                    task => Services.PluginLog.Error(task.Exception, "Failed to initialize action catalog."),
+                    TaskContinuationOptions.OnlyOnFaulted
+                );
         }
 
         private void Initialize()
@@ -36,11 +39,7 @@ namespace RedirectSmarter.Actions
             actionSheet = Services.DataManager.GetExcelSheet<Action>()!;
             roleActions =
             [
-                .. actionSheet.Where(action =>
-                    action.IsRoleAction
-                    && action.ClassJobLevel != 0
-                    && action.HasConfigurableTarget()
-                ),
+                .. actionSheet.Where(action => action.IsRoleAction && action.ClassJobLevel != 0 && action.HasConfigurableTarget()),
             ];
             jobIds =
             [
@@ -49,9 +48,7 @@ namespace RedirectSmarter.Actions
                     .Where(j => j.Role > 0 && j.ItemSoulCrystal.Value.RowId > 0)
                     .Select(j => j.RowId),
             ];
-            classJobCategories = Services.DataManager.GetExcelSheet<RawRow>(
-                name: "ClassJobCategory"
-            );
+            classJobCategories = Services.DataManager.GetExcelSheet<RawRow>(name: "ClassJobCategory");
 
             foreach (var job in jobIds)
             {
@@ -69,8 +66,7 @@ namespace RedirectSmarter.Actions
 
             var category = classJobCategories.GetRow(action.ClassJobCategory.RowId);
 
-            return category.ReadBoolColumn((int)job + 1)
-                && (action.HasConfigurableTarget() || action.IsExplicitlyAllowed());
+            return category.ReadBoolColumn((int)job + 1) && (action.HasConfigurableTarget() || action.IsExplicitlyAllowed());
         }
     }
 }

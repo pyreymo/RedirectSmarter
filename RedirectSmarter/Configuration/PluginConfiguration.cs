@@ -16,11 +16,11 @@ namespace RedirectSmarter.Configuration
         public string DefaultRedirection { get; set; } = RedirectTargets.Target;
         public Dictionary<uint, Redirection> Redirections { get; set; } = [];
 
-        public bool PruneUnsupportedRedirections()
+        public bool PruneUnsupportedRedirections(IReadOnlySet<string> validTargets)
         {
             var changed = false;
 
-            if (!RedirectTargets.Valid.Contains(DefaultRedirection))
+            if (!validTargets.Contains(DefaultRedirection))
             {
                 DefaultRedirection = RedirectTargets.Target;
                 changed = true;
@@ -28,9 +28,7 @@ namespace RedirectSmarter.Configuration
 
             foreach (var (actionId, redirection) in Redirections.ToList())
             {
-                var removed = redirection.Priority.RemoveAll(target =>
-                    !RedirectTargets.Valid.Contains(target)
-                );
+                var removed = redirection.Priority.RemoveAll(target => !validTargets.Contains(target));
 
                 if (removed > 0)
                 {

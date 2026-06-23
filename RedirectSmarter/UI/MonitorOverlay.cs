@@ -4,7 +4,8 @@ using Dalamud.Bindings.ImGui;
 
 namespace RedirectSmarter.UI
 {
-    // Visual-only HUD primitives parked for a possible future overlay.
+    // Experimental visual-only HUD primitives.
+    // This is intentionally not wired into the current redirect UI/runtime path.
     internal static class MonitorOverlayStyle
     {
         public const int NoiseDotCount = 20;
@@ -33,14 +34,7 @@ namespace RedirectSmarter.UI
                 ImDrawFlags.RoundCornersAll,
                 2.0f
             );
-            dl.AddRect(
-                p0,
-                p1,
-                Col(0.1f, 0.85f, 1.0f, 0.85f),
-                rounding,
-                ImDrawFlags.RoundCornersAll,
-                1.5f
-            );
+            dl.AddRect(p0, p1, Col(0.1f, 0.85f, 1.0f, 0.85f), rounding, ImDrawFlags.RoundCornersAll, 1.5f);
             dl.AddRect(
                 p0 + new Vector2(5),
                 p1 - new Vector2(5),
@@ -63,30 +57,10 @@ namespace RedirectSmarter.UI
             var p1 = p0 + size;
             var scanY = p0.Y + 18 + ((time * 42f) % (size.Y - 36));
 
-            dl.AddLine(
-                p0 + new Vector2(22, 8),
-                new Vector2(p1.X - 22, p0.Y + 8),
-                Col(0.55f, 0.95f, 1.0f, 0.35f),
-                1.0f
-            );
-            dl.AddLine(
-                new Vector2(p1.X - 58, p0.Y),
-                new Vector2(p1.X, p0.Y + 58),
-                Col(0.1f, 0.85f, 1.0f, 0.45f),
-                1.2f
-            );
-            dl.AddLine(
-                new Vector2(p0.X, p1.Y - 46),
-                new Vector2(p0.X + 46, p1.Y),
-                Col(0.1f, 0.85f, 1.0f, 0.35f),
-                1.2f
-            );
-            dl.AddRectFilled(
-                new Vector2(p0.X + 8, scanY),
-                new Vector2(p1.X - 8, scanY + 14),
-                Col(0.0f, 0.75f, 1.0f, 0.055f),
-                4f
-            );
+            dl.AddLine(p0 + new Vector2(22, 8), new Vector2(p1.X - 22, p0.Y + 8), Col(0.55f, 0.95f, 1.0f, 0.35f), 1.0f);
+            dl.AddLine(new Vector2(p1.X - 58, p0.Y), new Vector2(p1.X, p0.Y + 58), Col(0.1f, 0.85f, 1.0f, 0.45f), 1.2f);
+            dl.AddLine(new Vector2(p0.X, p1.Y - 46), new Vector2(p0.X + 46, p1.Y), Col(0.1f, 0.85f, 1.0f, 0.35f), 1.2f);
+            dl.AddRectFilled(new Vector2(p0.X + 8, scanY), new Vector2(p1.X - 8, scanY + 14), Col(0.0f, 0.75f, 1.0f, 0.055f), 4f);
 
             DrawTickMarks(dl, p0);
             DrawCornerBrackets(dl, p0, p1);
@@ -101,13 +75,7 @@ namespace RedirectSmarter.UI
             dl.AddText(pos, Col(0.75f, 0.96f, 1.0f, 1.0f), text);
         }
 
-        public static void DrawModuleBox(
-            ImDrawListPtr dl,
-            Vector2 p0,
-            Vector2 size,
-            string label,
-            bool active
-        )
+        public static void DrawModuleBox(ImDrawListPtr dl, Vector2 p0, Vector2 size, string label, bool active)
         {
             var p1 = p0 + size;
 
@@ -161,12 +129,7 @@ namespace RedirectSmarter.UI
             {
                 var x = p0.X + 44 + i * 22;
                 var h = i % 3 == 0 ? 8f : 4f;
-                dl.AddLine(
-                    new Vector2(x, p0.Y + 16),
-                    new Vector2(x, p0.Y + 16 + h),
-                    Col(0.2f, 0.85f, 1.0f, 0.28f),
-                    1f
-                );
+                dl.AddLine(new Vector2(x, p0.Y + 16), new Vector2(x, p0.Y + 16 + h), Col(0.2f, 0.85f, 1.0f, 0.28f), 1f);
             }
         }
 

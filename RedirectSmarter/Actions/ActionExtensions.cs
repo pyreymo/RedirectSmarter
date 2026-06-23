@@ -1,7 +1,4 @@
 ﻿using System.Collections.Generic;
-using Dalamud.Game.ClientState.Objects.Enums;
-using Dalamud.Game.ClientState.Objects.Types;
-using FFXIVClientStructs.FFXIV.Client.Game;
 using Lumina.Excel.Sheets;
 
 namespace RedirectSmarter.Actions
@@ -18,56 +15,6 @@ namespace RedirectSmarter.Actions
 
         public static bool IsExplicitlyAllowed(this Action a) => ActionAllowlist.Contains(a.RowId);
 
-        public static bool HasConfigurableTarget(this Action a) =>
-            a.CanTargetAlly || a.CanTargetHostile || a.CanTargetParty;
-
-        public static bool CanTargetFriendly(this Action a) => a.CanTargetAlly || a.CanTargetParty;
-
-        public static bool TargetTypeValid(this Action a, IGameObject target)
-        {
-            switch (target.ObjectKind)
-            {
-                case ObjectKind.BattleNpc:
-                    IBattleNpc npc = (IBattleNpc)target;
-                    return npc.BattleNpcKind == BattleNpcSubKind.Combatant
-                        ? a.CanTargetHostile
-                        : a.CanTargetFriendly();
-                case ObjectKind.EventNpc:
-                case ObjectKind.Pc:
-                case ObjectKind.Companion:
-                    return a.CanTargetFriendly();
-                default:
-                    Services.PluginLog.Information(
-                        $"{a.Name} cannot be used on {target.Name} with type {target.ObjectKind}"
-                    );
-                    return false;
-            }
-        }
-
-        public static bool TargetInRangeAndLOS(this Action a, IGameObject target, out uint err)
-        {
-            if (Services.ObjectTable.LocalPlayer is not { } player)
-            {
-                err = 0;
-                return false;
-            }
-
-            unsafe
-            {
-                var playerPtr = (FFXIVClientStructs.FFXIV.Client.Game.Object.GameObject*)
-                    player.Address;
-                var targetPtr = (FFXIVClientStructs.FFXIV.Client.Game.Object.GameObject*)
-                    target.Address;
-                err = ActionManager.MemberFunctionPointers.GetActionInRangeOrLoS(
-                    a.RowId,
-                    playerPtr,
-                    targetPtr
-                );
-            }
-
-            // 0 success, 562 range, 565 not facing, 566 line of sight
-            // TODO: Check "auto face" option instead of assuming it is on
-            return err == 0 || err == 565;
-        }
+        public static bool HasConfigurableTarget(this Action a) => a.CanTargetAlly || a.CanTargetHostile || a.CanTargetParty;
     }
 }

@@ -34,6 +34,9 @@ namespace RedirectSmarter
         public static IToastGui ToastGui { get; private set; } = null!;
 
         [PluginService]
+        public static IGameConfig GameConfig { get; private set; } = null!;
+
+        [PluginService]
         public static ITextureProvider TextureProvider { get; private set; } = null!;
 
         [PluginService]

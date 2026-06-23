@@ -120,9 +120,11 @@ The important boundary is that these should be target-selection strategies, not 
 The current code is split around those boundaries:
 
 - `ActionCatalog` builds the list of configurable actions.
-- `ActionExtensions` owns action capability and target validation helpers.
-- `RedirectTargets` defines available target definitions and display names.
-- `TargetResolver` maps target names and custom macro placeholders to target selectors.
-- `GameHooks` owns the action-use hook, macro-origin normalization, configured target application, and prevent-default behavior.
+- `ActionExtensions` owns action capability helpers and action allowlist checks.
+- `RedirectTargetCatalog` defines available targets, display names, legal persisted target ids, and custom macro placeholders.
+- `TargetResolver` maps target ids and custom macro placeholders to target selectors.
+- `TargetValidator` owns target type, range, and line-of-sight validation.
+- `ActionRedirector` owns configured target priority application and prevent-default behavior.
+- `GameHooks` owns the action-use hook, macro-origin normalization, and original action invocation.
 - `MacroPlaceholderHook` owns custom placeholder resolution.
-- `Configuration` stores user settings and prunes unsupported target names from older configs.
+- `Configuration` stores user settings, prunes unsupported target names from older configs, and applies UI redirection edits.

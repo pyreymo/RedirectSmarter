@@ -8,6 +8,8 @@ using RedirectSmarter.Actions;
 using RedirectSmarter.Configuration;
 using RedirectSmarter.Hooks;
 using RedirectSmarter.Localization;
+using RedirectSmarter.Redirecting;
+using RedirectSmarter.Targeting;
 using RedirectSmarter.UI;
 
 namespace RedirectSmarter
@@ -17,6 +19,9 @@ namespace RedirectSmarter
         public static string Name => "Redirect Smarter";
         private const string CommandName = "/rs";
         private PluginConfiguration Configuration { get; set; }
+        private RedirectTargetCatalog TargetCatalog { get; } = null!;
+        private TargetResolver TargetResolver { get; } = null!;
+        private ActionRedirector ActionRedirector { get; } = null!;
         private PluginUI PluginUi { get; } = null!;
         private ActionCatalog ActionCatalog { get; } = null!;
         private GameHooks Hooks { get; } = null!;
@@ -35,26 +40,27 @@ namespace RedirectSmarter
 
             try
             {
-                Configuration =
-                    Interface.GetPluginConfig() as PluginConfiguration ?? new PluginConfiguration();
+                Configuration = Interface.GetPluginConfig() as PluginConfiguration ?? new PluginConfiguration();
             }
             catch (Exception)
             {
-                Services.PluginLog.Error(
-                    "Failed to load plugin configuration. A new configuration file has been created."
-                );
+                Services.PluginLog.Error("Failed to load plugin configuration. A new configuration file has been created.");
                 Configuration = new PluginConfiguration();
             }
 
-            if (Configuration.PruneUnsupportedRedirections())
+            TargetCatalog = new RedirectTargetCatalog();
+            TargetResolver = new TargetResolver(TargetCatalog);
+
+            if (Configuration.PruneUnsupportedRedirections(TargetCatalog.ValidTargets))
             {
                 Configuration.Save();
             }
 
             ActionCatalog = new();
-            Hooks = new(Configuration, ActionCatalog);
-            MacroPlaceholderHook = new(Configuration);
-            PluginUi = new PluginUI(Configuration, ActionCatalog);
+            ActionRedirector = new ActionRedirector(Configuration, TargetResolver);
+            Hooks = new(Configuration, ActionCatalog, ActionRedirector);
+            MacroPlaceholderHook = new(Configuration, TargetResolver);
+            PluginUi = new PluginUI(Configuration, ActionCatalog, TargetCatalog);
 
             WindowSystem.AddWindow(PluginUi);
 
@@ -85,10 +91,7 @@ namespace RedirectSmarter
 
         private void RegisterCommand()
         {
-            CommandManager.AddHandler(
-                CommandName,
-                new CommandInfo(OnCommand) { HelpMessage = Loc.Text("Command.Help") }
-            );
+            CommandManager.AddHandler(CommandName, new CommandInfo(OnCommand) { HelpMessage = Loc.Text("Command.Help") });
         }
 
         private void OnLanguageChanged(string langCode)
@@ -117,12 +120,9 @@ namespace RedirectSmarter
             Configuration.Save();
             PluginUi.UpdateLanguage();
 
+            // TODO: remove this annoying toast
             Services.ToastGui.ShowNormal(
-                Loc.Text(
-                    Configuration.EnableRedirects
-                        ? "Command.RedirectsEnabled"
-                        : "Command.RedirectsDisabled"
-                ),
+                Loc.Text(Configuration.EnableRedirects ? "Command.RedirectsEnabled" : "Command.RedirectsDisabled"),
                 new ToastOptions { Speed = ToastSpeed.Fast }
             );
         }

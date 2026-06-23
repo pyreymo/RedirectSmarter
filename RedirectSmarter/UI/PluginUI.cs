@@ -18,13 +18,14 @@ namespace RedirectSmarter.UI
     class PluginUI : Window, IDisposable
     {
         private const float IconSize = 32f;
-        private const uint MaxRedirects = 12;
         private const float JobListWidth = 140f;
         private const float RedirectComboWidth = 135f;
         private const string WindowId = "RedirectSmarter.Main";
 
         private PluginConfiguration Configuration { get; }
         private ActionCatalog ActionCatalog { get; }
+        private RedirectTargetCatalog TargetCatalog { get; }
+        private RedirectionEditor RedirectionEditor { get; }
 
         private List<uint> Jobs => ActionCatalog.GetJobInfo();
 
@@ -39,11 +40,13 @@ namespace RedirectSmarter.UI
             Settings,
         }
 
-        public PluginUI(PluginConfiguration config, ActionCatalog actions)
+        public PluginUI(PluginConfiguration config, ActionCatalog actions, RedirectTargetCatalog targetCatalog)
             : base(Plugin.Name)
         {
             Configuration = config;
             ActionCatalog = actions;
+            TargetCatalog = targetCatalog;
+            RedirectionEditor = new RedirectionEditor(config);
 
             Size = new Vector2(760, 560);
             SizeCondition = ImGuiCond.FirstUseEver;
@@ -77,12 +80,6 @@ namespace RedirectSmarter.UI
             requestedTab = null;
         }
 
-        public void OpenSettings()
-        {
-            requestedTab = MainTab.Settings;
-            IsOpen = true;
-        }
-
         public void ToggleSettings()
         {
             requestedTab = MainTab.Settings;
@@ -96,8 +93,7 @@ namespace RedirectSmarter.UI
 
         private void UpdateWindowTitle()
         {
-            WindowName =
-                $"{Plugin.Name} - {Loc.Text(Configuration.EnableRedirects ? "Status.Enabled" : "Status.Disabled")}###{WindowId}";
+            WindowName = $"{Plugin.Name} - {Loc.Text(Configuration.EnableRedirects ? "Status.Enabled" : "Status.Disabled")}###{WindowId}";
         }
 
         private ImGuiTabItemFlags GetTabFlags(MainTab tab)
@@ -160,9 +156,7 @@ namespace RedirectSmarter.UI
                 return;
             }
 
-            var actions = selectedRoleActions
-                ? ActionCatalog.GetRoleActions()
-                : ActionCatalog.GetJobActions(selectedJob);
+            var actions = selectedRoleActions ? ActionCatalog.GetRoleActions() : ActionCatalog.GetJobActions(selectedJob);
 
             var filtered = actions.Where(action => !action.IsPvP).Where(MatchesSearch).ToList();
 
@@ -178,9 +172,7 @@ namespace RedirectSmarter.UI
 
             var text = Loc.Text("Empty.SelectJob");
             var textSize = ImGui.CalcTextSize(text);
-            ImGui.SetCursorPosX(
-                ImGui.GetCursorPosX() + Math.Max(0, (region.X - textSize.X) * 0.5f)
-            );
+            ImGui.SetCursorPosX(ImGui.GetCursorPosX() + Math.Max(0, (region.X - textSize.X) * 0.5f));
             ImGui.TextUnformatted(text);
         }
 
@@ -208,10 +200,7 @@ namespace RedirectSmarter.UI
 
         private bool MatchesSearch(LuminaAction action)
         {
-            return search.Length == 0
-                || action
-                    .Name.ToString()
-                    .Contains(search, StringComparison.CurrentCultureIgnoreCase);
+            return search.Length == 0 || action.Name.ToString().Contains(search, StringComparison.CurrentCultureIgnoreCase);
         }
 
         private void DrawActionTable(IReadOnlyList<LuminaAction> actions)
@@ -230,15 +219,9 @@ namespace RedirectSmarter.UI
 
             ImGui.TableSetupColumn("##icon", ImGuiTableColumnFlags.WidthFixed);
             ImGui.TableSetupColumn(Loc.Text("Table.Action"), ImGuiTableColumnFlags.WidthFixed);
-            ImGui.TableSetupColumn(
-                Loc.Text("Table.PreventDefault"),
-                ImGuiTableColumnFlags.WidthFixed
-            );
+            ImGui.TableSetupColumn(Loc.Text("Table.PreventDefault"), ImGuiTableColumnFlags.WidthFixed);
             ImGui.TableSetupColumn(Loc.Text("Table.Add"), ImGuiTableColumnFlags.WidthFixed);
-            ImGui.TableSetupColumn(
-                Loc.Text("Table.RedirectPriority"),
-                ImGuiTableColumnFlags.WidthStretch
-            );
+            ImGui.TableSetupColumn(Loc.Text("Table.RedirectPriority"), ImGuiTableColumnFlags.WidthStretch);
             ImGui.TableSetupScrollFreeze(0, 1);
             ImGui.TableHeadersRow();
 
@@ -262,8 +245,7 @@ namespace RedirectSmarter.UI
             var save = false;
             var iconSize = new Vector2(IconSize);
 
-            Configuration.Redirections.TryGetValue(action.RowId, out var redirection);
-            redirection ??= new() { ID = action.RowId };
+            var redirection = RedirectionEditor.GetRedirection(action.RowId);
 
             ImGui.TableNextRow();
 
@@ -283,14 +265,7 @@ namespace RedirectSmarter.UI
             ImGui.TableNextColumn();
             save |= DrawRedirectionPriority(action, redirection);
 
-            if (redirection.Count > 0 || redirection.PreventDefault)
-            {
-                Configuration.Redirections[action.RowId] = redirection;
-            }
-            else
-            {
-                Configuration.Redirections.Remove(action.RowId);
-            }
+            RedirectionEditor.Apply(action.RowId, redirection);
 
             return save;
         }
@@ -300,8 +275,7 @@ namespace RedirectSmarter.UI
             var preventDefault = redirection.PreventDefault;
             if (ImGui.Checkbox($"##prevent-default-{actionId}", ref preventDefault))
             {
-                redirection.PreventDefault = preventDefault;
-                return true;
+                return RedirectionEditor.SetPreventDefault(redirection, preventDefault);
             }
 
             return false;
@@ -310,7 +284,7 @@ namespace RedirectSmarter.UI
         private bool DrawAddRedirectionButton(uint actionId, Redirection redirection)
         {
             var save = false;
-            var canAdd = redirection.Count < MaxRedirects;
+            var canAdd = RedirectionEditor.CanAdd(redirection);
 
             if (!canAdd)
             {
@@ -320,8 +294,7 @@ namespace RedirectSmarter.UI
             ImGui.PushFont(UiBuilder.IconFont);
             if (ImGui.Button($"{FontAwesomeIcon.PlusCircle.ToIconString()}##add-{actionId}"))
             {
-                redirection.Priority.Add(Configuration.DefaultRedirection);
-                save = true;
+                save = RedirectionEditor.AddDefaultTarget(redirection);
             }
             ImGui.PopFont();
 
@@ -333,7 +306,7 @@ namespace RedirectSmarter.UI
             return save;
         }
 
-        private static bool DrawRedirectionPriority(LuminaAction action, Redirection redirection)
+        private bool DrawRedirectionPriority(LuminaAction action, Redirection redirection)
         {
             var save = false;
             var removeIndex = -1;
@@ -353,25 +326,14 @@ namespace RedirectSmarter.UI
                 }
 
                 ImGui.SetNextItemWidth(RedirectComboWidth);
-                if (
-                    ImGui.BeginCombo(
-                        $"##redirection-{action.RowId}-{i}",
-                        RedirectTargets.DisplayName(redirection[i])
-                    )
-                )
+                if (ImGui.BeginCombo($"##redirection-{action.RowId}-{i}", TargetCatalog.DisplayName(redirection[i])))
                 {
-                    foreach (var option in RedirectTargets.Definitions)
+                    foreach (var option in TargetCatalog.Definitions)
                     {
                         var selected = option.Id == redirection[i];
-                        if (
-                            ImGui.Selectable(
-                                $"{RedirectTargets.DisplayName(option.Id)}##{option.Id}",
-                                selected
-                            )
-                        )
+                        if (ImGui.Selectable($"{TargetCatalog.DisplayName(option.Id)}##{option.Id}", selected))
                         {
-                            redirection[i] = option.Id;
-                            save = true;
+                            save |= RedirectionEditor.SetTarget(redirection, i, option.Id);
                         }
 
                         if (selected)
@@ -385,11 +347,7 @@ namespace RedirectSmarter.UI
 
                 ImGui.SameLine();
                 ImGui.PushFont(UiBuilder.IconFont);
-                if (
-                    ImGui.Button(
-                        $"{FontAwesomeIcon.Trash.ToIconString()}##remove-{action.RowId}-{i}"
-                    )
-                )
+                if (ImGui.Button($"{FontAwesomeIcon.Trash.ToIconString()}##remove-{action.RowId}-{i}"))
                 {
                     removeIndex = i;
                     save = true;
@@ -399,7 +357,7 @@ namespace RedirectSmarter.UI
 
             if (removeIndex >= 0)
             {
-                redirection.RemoveAt(removeIndex);
+                save |= RedirectionEditor.RemoveAt(redirection, removeIndex);
             }
 
             return save;
@@ -428,11 +386,7 @@ namespace RedirectSmarter.UI
                 value => Configuration.EnableRedirects = value
             );
 
-            DrawConfigCheckbox(
-                Loc.Text("Config.IgnoreErrors"),
-                Configuration.IgnoreErrors,
-                value => Configuration.IgnoreErrors = value
-            );
+            DrawConfigCheckbox(Loc.Text("Config.IgnoreErrors"), Configuration.IgnoreErrors, value => Configuration.IgnoreErrors = value);
 
             DrawConfigCheckbox(
                 Loc.Text("Config.ActionsFromMacros"),

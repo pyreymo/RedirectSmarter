@@ -19,7 +19,7 @@
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <ProduceReferenceAssembly>false</ProduceReferenceAssembly>
     <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
-	<RestorePackagesWithLockFile>true</RestorePackagesWithLockFile>
+    <RestorePackagesWithLockFile>true</RestorePackagesWithLockFile>
   </PropertyGroup>
 
   <ItemGroup>
@@ -36,12 +36,11 @@
   </ItemGroup>
 
   <ItemGroup>
-	  <Content Include="..\images\icon.png" Link="images\icon.png" CopyToOutputDirectory="Always" />
+    <Content Include="..\images\icon.png" Link="images\icon.png" CopyToOutputDirectory="Always" />
   </ItemGroup>
 
   <ItemGroup>
     <PackageReference Update="DalamudPackager" Version="15.0.0" />
     <PackageReference Update="DotNet.ReproducibleBuilds" Version="2.0.2" />
   </ItemGroup>
-
 </Project>
