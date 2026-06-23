@@ -35,6 +35,25 @@ namespace RedirectSmarter.Configuration
             NormalizeTargetOptions();
         }
 
+        public void Move(int fromIndex, int toIndex)
+        {
+            NormalizeTargetOptions();
+
+            if (fromIndex < 0 || fromIndex >= Priority.Count || toIndex < 0 || toIndex >= Priority.Count || fromIndex == toIndex)
+            {
+                return;
+            }
+
+            var target = Priority[fromIndex];
+            var options = TargetOptions[fromIndex];
+
+            Priority.RemoveAt(fromIndex);
+            TargetOptions.RemoveAt(fromIndex);
+
+            Priority.Insert(toIndex, target);
+            TargetOptions.Insert(toIndex, options);
+        }
+
         public void Add(string value)
         {
             NormalizeTargetOptions();

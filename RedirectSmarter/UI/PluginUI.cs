@@ -21,7 +21,10 @@ namespace RedirectSmarter.UI
     {
         private const float IconSize = 32f;
         private const float JobListWidth = 140f;
-        private const float RedirectComboWidth = 135f;
+        private const float ActionListMinWidth = 240f;
+        private const float ActionListMaxWidth = 340f;
+        private const float StackedActionLayoutBreakpoint = 680f;
+        private const float ParameterLabelWidth = 120f;
         private const float IntParameterWidth = 54f;
         private const string WindowId = "RedirectSmarter.Main";
 
@@ -34,6 +37,7 @@ namespace RedirectSmarter.UI
 
         private bool selectedRoleActions;
         private uint selectedJob;
+        private uint? selectedActionId;
         private string search = string.Empty;
         private MainTab? requestedTab;
 
@@ -132,6 +136,7 @@ namespace RedirectSmarter.UI
             {
                 selectedRoleActions = true;
                 selectedJob = 0;
+                selectedActionId = null;
             }
 
             ImGui.Spacing();
@@ -147,6 +152,7 @@ namespace RedirectSmarter.UI
                 {
                     selectedJob = job;
                     selectedRoleActions = false;
+                    selectedActionId = null;
                 }
             }
         }
@@ -165,7 +171,7 @@ namespace RedirectSmarter.UI
 
             DrawActionToolbar(filtered.Count);
             ImGui.Spacing();
-            DrawActionTable(filtered);
+            DrawActionBrowser(filtered);
         }
 
         private static void DrawEmptyState()
@@ -206,77 +212,146 @@ namespace RedirectSmarter.UI
             return search.Length == 0 || action.Name.ToString().Contains(search, StringComparison.CurrentCultureIgnoreCase);
         }
 
-        private void DrawActionTable(IReadOnlyList<LuminaAction> actions)
+        private void DrawActionBrowser(IReadOnlyList<LuminaAction> actions)
         {
-            var flags =
-                ImGuiTableFlags.BordersInnerH
-                | ImGuiTableFlags.RowBg
-                | ImGuiTableFlags.Resizable
-                | ImGuiTableFlags.ScrollY
-                | ImGuiTableFlags.SizingFixedFit;
+            EnsureSelectedAction(actions);
 
-            if (!ImGui.BeginTable("actions", 5, flags, new Vector2(0, 0)))
+            if (actions.Count == 0)
             {
+                DrawNoActionsState();
                 return;
             }
 
-            ImGui.TableSetupColumn("##icon", ImGuiTableColumnFlags.WidthFixed);
-            ImGui.TableSetupColumn(Loc.Text("Table.Action"), ImGuiTableColumnFlags.WidthFixed);
-            ImGui.TableSetupColumn(Loc.Text("Table.PreventDefault"), ImGuiTableColumnFlags.WidthFixed);
-            ImGui.TableSetupColumn(Loc.Text("Table.Add"), ImGuiTableColumnFlags.WidthFixed);
-            ImGui.TableSetupColumn(Loc.Text("Table.RedirectPriority"), ImGuiTableColumnFlags.WidthStretch);
-            ImGui.TableSetupScrollFreeze(0, 1);
-            ImGui.TableHeadersRow();
-
+            var available = ImGui.GetContentRegionAvail();
             var save = false;
 
-            foreach (var action in actions)
+            if (available.X < StackedActionLayoutBreakpoint)
             {
-                save |= DrawActionRow(action);
+                var listHeight = Math.Min(220f, Math.Max(140f, available.Y * 0.38f));
+                if (ImGui.BeginChild("action-list", new Vector2(0, listHeight), true))
+                {
+                    DrawActionList(actions);
+                    ImGui.EndChild();
+                }
+
+                ImGui.Spacing();
+
+                if (ImGui.BeginChild("selected-action-editor", new Vector2(0, 0), false))
+                {
+                    save |= DrawSelectedActionEditor(actions);
+                    ImGui.EndChild();
+                }
+            }
+            else
+            {
+                var listWidth = Math.Clamp(available.X * 0.34f, ActionListMinWidth, ActionListMaxWidth);
+                if (ImGui.BeginChild("action-list", new Vector2(listWidth, 0), true))
+                {
+                    DrawActionList(actions);
+                    ImGui.EndChild();
+                }
+
+                ImGui.SameLine();
+
+                if (ImGui.BeginChild("selected-action-editor", new Vector2(0, 0), false))
+                {
+                    save |= DrawSelectedActionEditor(actions);
+                    ImGui.EndChild();
+                }
             }
 
             if (save)
             {
                 Configuration.Save();
             }
-
-            ImGui.EndTable();
         }
 
-        private bool DrawActionRow(LuminaAction action)
+        private void DrawActionList(IReadOnlyList<LuminaAction> actions)
         {
-            var save = false;
+            ImGui.TextUnformatted(Loc.Text("Section.ActionList"));
+            ImGui.Separator();
+
+            foreach (var action in actions)
+            {
+                DrawActionListItem(action);
+            }
+        }
+
+        private void DrawActionListItem(LuminaAction action)
+        {
+            var redirection = RedirectionEditor.GetRedirection(action.RowId);
+            var selected = selectedActionId == action.RowId;
             var iconSize = new Vector2(IconSize);
 
-            var redirection = RedirectionEditor.GetRedirection(action.RowId);
-
-            ImGui.TableNextRow();
-
-            ImGui.TableNextColumn();
+            ImGui.PushID($"action-{action.RowId}");
             DrawIcon(action.Icon, iconSize);
+            ImGui.SameLine();
 
-            ImGui.TableNextColumn();
-            ImGui.AlignTextToFramePadding();
-            ImGui.TextUnformatted(action.Name.ToString());
+            var label = action.Name.ToString();
+            if (redirection.Count > 0 || redirection.PreventDefault)
+            {
+                label = $"{label}  {Loc.Text("Redirect.EnabledBadge")}";
+            }
 
-            ImGui.TableNextColumn();
+            if (ImGui.Selectable($"{label}##select", selected))
+            {
+                selectedActionId = action.RowId;
+            }
+
+            if (HasVisibleSummary(redirection))
+            {
+                ImGui.Indent(IconSize + ImGui.GetStyle().ItemSpacing.X);
+                DrawDisabledWrapped(SummarizeRedirection(redirection));
+                ImGui.Unindent(IconSize + ImGui.GetStyle().ItemSpacing.X);
+            }
+
+            ImGui.PopID();
+        }
+
+        private bool DrawSelectedActionEditor(IReadOnlyList<LuminaAction> actions)
+        {
+            if (!TryGetSelectedAction(actions, out var action))
+            {
+                DrawSelectActionState();
+                return false;
+            }
+
+            var redirection = RedirectionEditor.GetRedirection(action.RowId);
+            var save = false;
+
+            DrawActionEditorHeader(action);
+            ImGui.Spacing();
             save |= DrawPreventDefaultCheckbox(action.RowId, redirection);
+            ImGui.Spacing();
+            ImGui.Separator();
+            ImGui.Spacing();
 
-            ImGui.TableNextColumn();
-            save |= DrawAddRedirectionButton(action.RowId, redirection);
+            ImGui.TextUnformatted(Loc.Text("Section.TargetSelectionOrder"));
+            ImGui.SameLine();
+            save |= DrawAddTargetRuleButton(action.RowId, redirection);
+            ImGui.Spacing();
 
-            ImGui.TableNextColumn();
-            save |= DrawRedirectionPriority(action, redirection);
-
+            save |= DrawTargetRuleStack(action.RowId, redirection);
             RedirectionEditor.Apply(action.RowId, redirection);
 
             return save;
         }
 
+        private static void DrawActionEditorHeader(LuminaAction action)
+        {
+            DrawIcon(action.Icon, new Vector2(IconSize));
+            ImGui.SameLine();
+
+            ImGui.BeginGroup();
+            ImGui.TextUnformatted(action.Name.ToString());
+            ImGui.TextDisabled($"#{action.RowId}");
+            ImGui.EndGroup();
+        }
+
         private static bool DrawPreventDefaultCheckbox(uint actionId, Redirection redirection)
         {
             var preventDefault = redirection.PreventDefault;
-            if (ImGui.Checkbox($"##prevent-default-{actionId}", ref preventDefault))
+            if (ImGui.Checkbox($"{Loc.Text("Redirect.BlockOriginalTarget")}##prevent-default-{actionId}", ref preventDefault))
             {
                 return RedirectionEditor.SetPreventDefault(redirection, preventDefault);
             }
@@ -284,9 +359,8 @@ namespace RedirectSmarter.UI
             return false;
         }
 
-        private bool DrawAddRedirectionButton(uint actionId, Redirection redirection)
+        private bool DrawAddTargetRuleButton(uint actionId, Redirection redirection)
         {
-            var save = false;
             var canAdd = RedirectionEditor.CanAdd(redirection);
 
             if (!canAdd)
@@ -294,12 +368,8 @@ namespace RedirectSmarter.UI
                 ImGui.BeginDisabled();
             }
 
-            ImGui.PushFont(UiBuilder.IconFont);
-            if (ImGui.Button($"{FontAwesomeIcon.PlusCircle.ToIconString()}##add-{actionId}"))
-            {
-                save = RedirectionEditor.AddDefaultTarget(redirection);
-            }
-            ImGui.PopFont();
+            var save =
+                ImGui.Button($"{Loc.Text("Redirect.AddTargetRule")}##add-{actionId}") && RedirectionEditor.AddDefaultTarget(redirection);
 
             if (!canAdd)
             {
@@ -309,63 +379,162 @@ namespace RedirectSmarter.UI
             return save;
         }
 
-        private bool DrawRedirectionPriority(LuminaAction action, Redirection redirection)
+        private bool DrawTargetRuleStack(uint actionId, Redirection redirection)
         {
             var save = false;
             var removeIndex = -1;
+            var moveFrom = -1;
+            var moveTo = -1;
 
             if (redirection.Count == 0)
             {
-                ImGui.AlignTextToFramePadding();
-                ImGui.TextDisabled(Loc.Text("Redirect.None"));
+                ImGui.TextDisabled(Loc.Text("Redirect.NoTargetRules"));
                 return false;
             }
 
             for (var i = 0; i < redirection.Count; i++)
             {
-                if (i > 0)
+                save |= DrawTargetRuleBlock(actionId, redirection, i, out var requestedMoveTo, out var requestedRemove);
+                if (requestedMoveTo >= 0)
                 {
-                    ImGui.SameLine();
+                    moveFrom = i;
+                    moveTo = requestedMoveTo;
                 }
 
-                ImGui.SetNextItemWidth(RedirectComboWidth);
-                if (ImGui.BeginCombo($"##redirection-{action.RowId}-{i}", TargetCatalog.DisplayName(redirection[i])))
-                {
-                    foreach (var option in TargetCatalog.Definitions)
-                    {
-                        var selected = option.Id == redirection[i];
-                        if (ImGui.Selectable($"{TargetCatalog.DisplayName(option.Id)}##{option.Id}", selected))
-                        {
-                            save |= RedirectionEditor.SetTarget(redirection, i, option.Id);
-                        }
-
-                        if (selected)
-                        {
-                            ImGui.SetItemDefaultFocus();
-                        }
-                    }
-
-                    ImGui.EndCombo();
-                }
-
-                save |= DrawTargetOptions(action.RowId, redirection, i);
-
-                ImGui.SameLine();
-                ImGui.PushFont(UiBuilder.IconFont);
-                if (ImGui.Button($"{FontAwesomeIcon.Trash.ToIconString()}##remove-{action.RowId}-{i}"))
+                if (requestedRemove)
                 {
                     removeIndex = i;
-                    save = true;
                 }
-                ImGui.PopFont();
             }
 
             if (removeIndex >= 0)
             {
                 save |= RedirectionEditor.RemoveAt(redirection, removeIndex);
             }
+            else if (moveFrom >= 0 && moveTo >= 0)
+            {
+                save |= RedirectionEditor.Move(redirection, moveFrom, moveTo);
+            }
 
             return save;
+        }
+
+        private bool DrawTargetRuleBlock(
+            uint actionId,
+            Redirection redirection,
+            int index,
+            out int requestedMoveTo,
+            out bool requestedRemove
+        )
+        {
+            requestedMoveTo = -1;
+            requestedRemove = false;
+
+            TargetCatalog.TryGetDefinition(redirection[index], out var definition);
+            var parameterCount = definition?.Parameters.Count ?? 0;
+            var blockHeight = GetRuleBlockHeight(parameterCount);
+
+            ImGui.PushID($"rule-{actionId}-{index}");
+            if (ImGui.BeginChild("rule-block", new Vector2(0, blockHeight), true))
+            {
+                var save = DrawRuleHeader(actionId, redirection, index, out requestedMoveTo, out requestedRemove);
+
+                if (definition is { Parameters.Count: > 0 })
+                {
+                    ImGui.Spacing();
+                    save |= DrawTargetOptions(actionId, redirection, index);
+                }
+
+                ImGui.EndChild();
+                ImGui.PopID();
+                return save;
+            }
+
+            ImGui.EndChild();
+            ImGui.PopID();
+            return false;
+        }
+
+        private bool DrawRuleHeader(uint actionId, Redirection redirection, int index, out int requestedMoveTo, out bool requestedRemove)
+        {
+            requestedMoveTo = -1;
+            requestedRemove = false;
+            var save = false;
+
+            ImGui.AlignTextToFramePadding();
+            ImGui.TextUnformatted($"{index + 1}.");
+            ImGui.SameLine();
+
+            ImGui.SetNextItemWidth(GetRuleTargetComboWidth());
+            if (ImGui.BeginCombo("##target", TargetCatalog.DisplayName(redirection[index])))
+            {
+                foreach (var option in TargetCatalog.Definitions)
+                {
+                    var selected = option.Id == redirection[index];
+                    if (ImGui.Selectable($"{TargetCatalog.DisplayName(option.Id)}##{option.Id}", selected))
+                    {
+                        save |= RedirectionEditor.SetTarget(redirection, index, option.Id);
+                    }
+
+                    if (selected)
+                    {
+                        ImGui.SetItemDefaultFocus();
+                    }
+                }
+
+                ImGui.EndCombo();
+            }
+
+            ImGui.SameLine();
+            if (DrawMoveButton(FontAwesomeIcon.ArrowUp, "up", index == 0))
+            {
+                requestedMoveTo = index - 1;
+            }
+
+            ImGui.SameLine();
+            if (DrawMoveButton(FontAwesomeIcon.ArrowDown, "down", index == redirection.Count - 1))
+            {
+                requestedMoveTo = index + 1;
+            }
+
+            ImGui.SameLine();
+
+            ImGui.PushFont(UiBuilder.IconFont);
+            if (ImGui.Button($"{FontAwesomeIcon.Trash.ToIconString()}##remove"))
+            {
+                requestedRemove = true;
+                save = true;
+            }
+            ImGui.PopFont();
+
+            return save;
+        }
+
+        private static bool DrawMoveButton(FontAwesomeIcon icon, string id, bool disabled)
+        {
+            if (disabled)
+            {
+                ImGui.BeginDisabled();
+            }
+
+            ImGui.PushFont(UiBuilder.IconFont);
+            var clicked = ImGui.Button($"{icon.ToIconString()}##{id}");
+            ImGui.PopFont();
+
+            if (disabled)
+            {
+                ImGui.EndDisabled();
+            }
+
+            return clicked && !disabled;
+        }
+
+        private static float GetRuleTargetComboWidth()
+        {
+            var style = ImGui.GetStyle();
+            var buttonWidth = ImGui.GetFrameHeight();
+            var reservedWidth = buttonWidth * 3 + style.ItemSpacing.X * 4;
+            return Math.Max(160f, ImGui.GetContentRegionAvail().X - reservedWidth);
         }
 
         private bool DrawTargetOptions(uint actionId, Redirection redirection, int index)
@@ -409,11 +578,11 @@ namespace RedirectSmarter.UI
             TargetParameterDefinition parameter
         )
         {
-            ImGui.SameLine();
+            var startX = ImGui.GetCursorPosX();
             ImGui.AlignTextToFramePadding();
             ImGui.TextUnformatted(Loc.Text(parameter.DisplayNameKey));
 
-            ImGui.SameLine();
+            ImGui.SameLine(startX + ParameterLabelWidth);
             ImGui.SetNextItemWidth(IntParameterWidth);
             var value = GetIntParameterValue(options, parameter);
             if (ImGui.InputInt($"##target-param-{actionId}-{index}-{parameter.Name}", ref value, 0, 0))
@@ -439,9 +608,13 @@ namespace RedirectSmarter.UI
             TargetParameterDefinition parameter
         )
         {
-            ImGui.SameLine();
+            var startX = ImGui.GetCursorPosX();
+            ImGui.AlignTextToFramePadding();
+            ImGui.TextUnformatted(Loc.Text(parameter.DisplayNameKey));
+
+            ImGui.SameLine(startX + ParameterLabelWidth);
             var value = GetBoolParameterValue(options, parameter);
-            if (ImGui.Checkbox($"{Loc.Text(parameter.DisplayNameKey)}##target-param-{actionId}-{index}-{parameter.Name}", ref value))
+            if (ImGui.Checkbox($"##target-param-{actionId}-{index}-{parameter.Name}", ref value))
             {
                 return RedirectionEditor.SetTargetParameter(redirection, index, parameter, value.ToString().ToLowerInvariant());
             }
@@ -449,16 +622,111 @@ namespace RedirectSmarter.UI
             return false;
         }
 
-        private static int GetIntParameterValue(RedirectionTargetOptions options, TargetParameterDefinition parameter)
+        private void EnsureSelectedAction(IReadOnlyList<LuminaAction> actions)
         {
-            var value = options.Parameters.TryGetValue(parameter.Name, out var configuredValue) ? configuredValue : parameter.DefaultValue;
-
-            if (!parameter.TryNormalize(value, out var normalizedValue))
+            if (actions.Count == 0)
             {
-                normalizedValue = parameter.DefaultValue;
+                selectedActionId = null;
+                return;
             }
 
-            return int.Parse(normalizedValue, CultureInfo.InvariantCulture);
+            if (selectedActionId is not null && actions.Any(action => action.RowId == selectedActionId.Value))
+            {
+                return;
+            }
+
+            selectedActionId = actions[0].RowId;
+        }
+
+        private bool TryGetSelectedAction(IReadOnlyList<LuminaAction> actions, out LuminaAction selectedAction)
+        {
+            if (selectedActionId is not null)
+            {
+                foreach (var action in actions)
+                {
+                    if (action.RowId == selectedActionId.Value)
+                    {
+                        selectedAction = action;
+                        return true;
+                    }
+                }
+            }
+
+            selectedAction = default;
+            return false;
+        }
+
+        private static void DrawNoActionsState()
+        {
+            ImGui.TextDisabled(Loc.Text("Empty.NoActions"));
+        }
+
+        private static void DrawSelectActionState()
+        {
+            ImGui.TextDisabled(Loc.Text("Empty.SelectAction"));
+        }
+
+        private static void DrawDisabledWrapped(string text)
+        {
+            ImGui.PushStyleColor(ImGuiCol.Text, ImGui.GetStyle().Colors[(int)ImGuiCol.TextDisabled]);
+            ImGui.PushTextWrapPos();
+            ImGui.TextUnformatted(text);
+            ImGui.PopTextWrapPos();
+            ImGui.PopStyleColor();
+        }
+
+        private static float GetRuleBlockHeight(int parameterCount)
+        {
+            return Math.Max(70f, ImGui.GetFrameHeightWithSpacing() * (parameterCount + 2) + ImGui.GetStyle().WindowPadding.Y);
+        }
+
+        private string SummarizeRedirection(Redirection redirection)
+        {
+            var parts = new List<string>();
+
+            for (var i = 0; i < redirection.Count; i++)
+            {
+                parts.Add(SummarizeTarget(redirection, i));
+            }
+
+            if (parts.Count == 0)
+            {
+                return redirection.PreventDefault ? Loc.Text("Redirect.BlocksDefaultSummary") : Loc.Text("Redirect.None");
+            }
+
+            var summary = string.Join(" -> ", parts);
+            return redirection.PreventDefault ? $"{summary} ({Loc.Text("Redirect.BlocksDefaultSummary")})" : summary;
+        }
+
+        private static bool HasVisibleSummary(Redirection redirection)
+        {
+            return redirection.Count > 0 || redirection.PreventDefault;
+        }
+
+        private string SummarizeTarget(Redirection redirection, int index)
+        {
+            var displayName = TargetCatalog.DisplayName(redirection[index]);
+            if (!TargetCatalog.TryGetDefinition(redirection[index], out var definition) || definition.Parameters.Count == 0)
+            {
+                return displayName;
+            }
+
+            var options = redirection.GetTargetOptions(index);
+            var parameters = definition.Parameters.Select(parameter => SummarizeParameter(options, parameter));
+            return $"{displayName} ({string.Join(", ", parameters)})";
+        }
+
+        private static string SummarizeParameter(RedirectionTargetOptions options, TargetParameterDefinition parameter)
+        {
+            var name = parameter.Aliases.Count > 0 ? parameter.Aliases[0] : parameter.Name;
+            var value = GetParameterValue(options, parameter);
+            var suffix = parameter.Kind == TargetParameterKind.Int ? parameter.Suffix : null;
+            return $"{name}={value}{suffix}";
+        }
+
+        private static int GetIntParameterValue(RedirectionTargetOptions options, TargetParameterDefinition parameter)
+        {
+            return int.Parse(GetParameterValue(options, parameter), CultureInfo.InvariantCulture);
         }
 
         private static bool GetBoolParameterValue(RedirectionTargetOptions options, TargetParameterDefinition parameter)
@@ -471,6 +739,12 @@ namespace RedirectSmarter.UI
             }
 
             return bool.Parse(normalizedValue);
+        }
+
+        private static string GetParameterValue(RedirectionTargetOptions options, TargetParameterDefinition parameter)
+        {
+            var value = options.Parameters.TryGetValue(parameter.Name, out var configuredValue) ? configuredValue : parameter.DefaultValue;
+            return parameter.TryNormalize(value, out var normalizedValue) ? normalizedValue : parameter.DefaultValue;
         }
 
         private static void DrawIcon(ushort id, Vector2 size = default)

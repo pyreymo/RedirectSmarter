@@ -82,6 +82,17 @@ namespace RedirectSmarter.Configuration
             return true;
         }
 
+        public static bool Move(Redirection redirection, int fromIndex, int toIndex)
+        {
+            if (!IsValidIndex(redirection, fromIndex) || !IsValidIndex(redirection, toIndex) || fromIndex == toIndex)
+            {
+                return false;
+            }
+
+            redirection.Move(fromIndex, toIndex);
+            return true;
+        }
+
         public void Apply(uint actionId, Redirection redirection)
         {
             if (redirection.Count > 0 || redirection.PreventDefault)
