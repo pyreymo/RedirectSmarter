@@ -2,6 +2,9 @@ using Dalamud.Game.ClientState.Objects.Types;
 
 namespace RedirectSmarter.Targeting
 {
+    /// <summary>
+    /// Selects the living party member with the lowest missing-HP percentage, falling back to a damaged local player.
+    /// </summary>
     internal sealed class LowestHpPartyMemberTargetSelector : IRedirectTargetSelector
     {
         public IGameObject? Resolve()

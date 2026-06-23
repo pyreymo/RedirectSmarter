@@ -1,5 +1,8 @@
 namespace RedirectSmarter.Targeting
 {
+    /// <summary>
+    /// Defines the stable persisted ids and custom placeholder names for built-in redirect targets.
+    /// </summary>
     internal static class RedirectTargets
     {
         public const string Target = "Target";

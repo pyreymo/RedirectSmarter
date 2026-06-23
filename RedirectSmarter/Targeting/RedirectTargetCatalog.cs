@@ -4,6 +4,9 @@ using RedirectSmarter.Localization;
 
 namespace RedirectSmarter.Targeting
 {
+    /// <summary>
+    /// Owns the ordered redirect target definitions and lookup tables used by config, UI, and runtime resolution.
+    /// </summary>
     internal sealed class RedirectTargetCatalog
     {
         private readonly Dictionary<string, RedirectTargetDefinition> definitionsById;

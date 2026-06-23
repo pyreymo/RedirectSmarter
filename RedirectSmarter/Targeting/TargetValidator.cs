@@ -7,6 +7,9 @@ using LuminaAction = Lumina.Excel.Sheets.Action;
 
 namespace RedirectSmarter.Targeting
 {
+    /// <summary>
+    /// Validates whether an action can be redirected to a resolved target using the client's range, line-of-sight, and target-kind rules.
+    /// </summary>
     internal static class TargetValidator
     {
         private const uint ActionStatusSuccess = 0;

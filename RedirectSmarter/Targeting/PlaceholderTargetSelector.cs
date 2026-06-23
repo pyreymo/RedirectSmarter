@@ -4,6 +4,9 @@ using FFXIVClientStructs.FFXIV.Client.UI.Misc;
 
 namespace RedirectSmarter.Targeting
 {
+    /// <summary>
+    /// Resolves a native game placeholder, such as &lt;2&gt;, through the client's pronoun module.
+    /// </summary>
     internal sealed class PlaceholderTargetSelector(string placeholder) : IRedirectTargetSelector
     {
         public unsafe IGameObject? Resolve()
