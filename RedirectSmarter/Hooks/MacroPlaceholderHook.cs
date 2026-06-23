@@ -32,6 +32,7 @@ namespace RedirectSmarter.Hooks
                 );
 
             resolvePlaceholderHook.Enable();
+            Services.PluginLog.Debug("ResolvePlaceholder hook enabled.");
         }
 
         private GameObject* ResolvePlaceholderDetour(
@@ -44,18 +45,37 @@ namespace RedirectSmarter.Hooks
         {
             if (!configuration.EnableRedirects)
             {
+                Services.PluginLog.Debug("Macro placeholder bypassed: redirects disabled.");
                 return resolvePlaceholderHook.Original(pronounModule, placeholder, a3, a4, a5);
             }
 
             try
             {
                 var placeholderText = placeholder.ToString();
+                Services.PluginLog.Debug(
+                    "Macro placeholder intercepted: placeholder={Placeholder}, a3={A3}, a4={A4}, a5={A5}",
+                    placeholderText,
+                    a3,
+                    a4,
+                    a5
+                );
                 var resolvedTarget = targetResolver.ResolveMacroPlaceholder(placeholderText);
 
                 if (resolvedTarget is not null)
                 {
+                    Services.PluginLog.Debug(
+                        "Macro placeholder resolved: placeholder={Placeholder}, result={Result}, gameObjectId={GameObjectId}",
+                        placeholderText,
+                        resolvedTarget.Name.ToString(),
+                        resolvedTarget.GameObjectId
+                    );
                     return (GameObject*)resolvedTarget.Address;
                 }
+
+                Services.PluginLog.Debug(
+                    "Macro placeholder falling back: placeholder={Placeholder}",
+                    placeholderText
+                );
             }
             catch (Exception ex)
             {

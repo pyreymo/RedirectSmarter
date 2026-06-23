@@ -28,14 +28,46 @@ namespace RedirectSmarter.Targeting
 
         public IGameObject? Resolve(string target)
         {
-            return selectors.TryGetValue(target, out var selector) ? selector.Resolve() : null;
+            if (!selectors.TryGetValue(target, out var selector))
+            {
+                Services.PluginLog.Debug("Target resolver missed selector: target={Target}", target);
+                return null;
+            }
+
+            Services.PluginLog.Debug("Target resolver resolving: target={Target}", target);
+            var resolvedTarget = selector.Resolve();
+            Services.PluginLog.Debug(
+                "Target resolver resolved: target={Target}, result={Result}, gameObjectId={GameObjectId}",
+                target,
+                resolvedTarget?.Name.ToString() ?? "null",
+                resolvedTarget?.GameObjectId ?? 0
+            );
+            return resolvedTarget;
         }
 
         public IGameObject? ResolveMacroPlaceholder(string placeholder)
         {
-            return macroPlaceholderSelectors.TryGetValue(placeholder, out var selector)
-                ? selector.Resolve()
-                : null;
+            if (!macroPlaceholderSelectors.TryGetValue(placeholder, out var selector))
+            {
+                Services.PluginLog.Debug(
+                    "Macro placeholder resolver missed selector: placeholder={Placeholder}",
+                    placeholder
+                );
+                return null;
+            }
+
+            Services.PluginLog.Debug(
+                "Macro placeholder resolver resolving: placeholder={Placeholder}",
+                placeholder
+            );
+            var resolvedTarget = selector.Resolve();
+            Services.PluginLog.Debug(
+                "Macro placeholder resolver resolved: placeholder={Placeholder}, result={Result}, gameObjectId={GameObjectId}",
+                placeholder,
+                resolvedTarget?.Name.ToString() ?? "null",
+                resolvedTarget?.GameObjectId ?? 0
+            );
+            return resolvedTarget;
         }
     }
 }

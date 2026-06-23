@@ -76,6 +76,7 @@ namespace RedirectSmarter.Hooks
             }
 
             useActionHook.Enable();
+            Services.PluginLog.Debug("UseAction hook enabled.");
         }
 
         private unsafe bool UseActionCallback(
@@ -100,49 +101,122 @@ namespace RedirectSmarter.Hooks
                 outOptAreaTargeted
             );
 
+            Services.PluginLog.Debug(
+                "UseAction intercepted: actionType={ActionType}, actionId={ActionId}, targetId={TargetId}, mode={Mode}, extraParam={ExtraParam}, comboRouteId={ComboRouteId}",
+                actionType,
+                actionId,
+                targetId,
+                mode,
+                extraParam,
+                comboRouteId
+            );
+
             if (!configuration.EnableRedirects)
             {
+                Services.PluginLog.Debug(
+                    "UseAction bypassed: redirects disabled, actionId={ActionId}",
+                    actionId
+                );
                 return ContinueOriginal(context);
             }
 
             if (actionType != ActionType.Action)
             {
+                Services.PluginLog.Debug(
+                    "UseAction bypassed: unsupported action type, actionType={ActionType}, actionId={ActionId}",
+                    actionType,
+                    actionId
+                );
                 return ContinueOriginal(context);
             }
 
             if (!actionCatalog.IsReady)
             {
+                Services.PluginLog.Debug(
+                    "UseAction bypassed: action catalog not ready, actionId={ActionId}",
+                    actionId
+                );
                 return ContinueOriginal(context);
             }
 
             var requestedAction = actionCatalog.GetRow(actionId);
             if (requestedAction.IsPvP)
             {
+                Services.PluginLog.Debug(
+                    "UseAction bypassed: PvP action, actionId={ActionId}, actionName={ActionName}",
+                    actionId,
+                    requestedAction.Name.ToString()
+                );
                 return ContinueOriginal(context);
             }
 
             context = context.WithMode(GetModeWithMacroQueueing(mode));
+            if (context.Mode != mode)
+            {
+                Services.PluginLog.Debug(
+                    "UseAction mode adjusted: actionId={ActionId}, originalMode={OriginalMode}, adjustedMode={AdjustedMode}",
+                    actionId,
+                    mode,
+                    context.Mode
+                );
+            }
 
             var adjustedActionId = ActionManager.MemberFunctionPointers.GetAdjustedActionId(
                 (ActionManager*)actionManager,
                 actionId
             );
             var adjustedAction = actionCatalog.GetRow(adjustedActionId);
+            Services.PluginLog.Debug(
+                "UseAction action resolved: requestedId={RequestedId}, requestedName={RequestedName}, adjustedId={AdjustedId}, adjustedName={AdjustedName}",
+                actionId,
+                requestedAction.Name.ToString(),
+                adjustedActionId,
+                adjustedAction.Name.ToString()
+            );
 
             if (!ShouldRedirect(adjustedAction, context.Mode))
             {
+                Services.PluginLog.Debug(
+                    "UseAction bypassed: ShouldRedirect false, adjustedId={AdjustedId}, mode={Mode}, canTargetAlly={CanTargetAlly}, canTargetHostile={CanTargetHostile}, canTargetParty={CanTargetParty}",
+                    adjustedActionId,
+                    context.Mode,
+                    adjustedAction.CanTargetAlly,
+                    adjustedAction.CanTargetHostile,
+                    adjustedAction.CanTargetParty
+                );
                 return ContinueOriginal(context);
             }
 
             var configurationId = GetConfigurationId(requestedAction, adjustedAction);
-            if (
-                configuration.Redirections.TryGetValue(configurationId, out var redirection)
-                && TryUseConfiguredTarget(context, adjustedAction, redirection, out var result)
-            )
+            if (!configuration.Redirections.TryGetValue(configurationId, out var redirection))
+            {
+                Services.PluginLog.Debug(
+                    "UseAction bypassed: no configured redirection, requestedId={RequestedId}, adjustedId={AdjustedId}, configurationId={ConfigurationId}",
+                    actionId,
+                    adjustedActionId,
+                    configurationId
+                );
+                return ContinueOriginal(context);
+            }
+
+            Services.PluginLog.Debug(
+                "UseAction trying configured redirection: requestedId={RequestedId}, adjustedId={AdjustedId}, configurationId={ConfigurationId}, priorityCount={PriorityCount}, preventDefault={PreventDefault}",
+                actionId,
+                adjustedActionId,
+                configurationId,
+                redirection.Priority.Count,
+                redirection.PreventDefault
+            );
+
+            if (TryUseConfiguredTarget(context, adjustedAction, redirection, out var result))
             {
                 return result;
             }
 
+            Services.PluginLog.Debug(
+                "UseAction fell through configured redirection unexpectedly, configurationId={ConfigurationId}",
+                configurationId
+            );
             return ContinueOriginal(context);
         }
 
@@ -191,17 +265,45 @@ namespace RedirectSmarter.Hooks
         {
             foreach (var targetName in redirection.Priority)
             {
+                Services.PluginLog.Debug(
+                    "Trying redirect target: actionId={ActionId}, actionName={ActionName}, target={Target}",
+                    adjustedAction.RowId,
+                    adjustedAction.Name.ToString(),
+                    targetName
+                );
                 var resolvedTarget = targetResolver.Resolve(targetName);
                 if (resolvedTarget is null)
                 {
+                    Services.PluginLog.Debug(
+                        "Redirect target unresolved: actionId={ActionId}, target={Target}",
+                        adjustedAction.RowId,
+                        targetName
+                    );
                     continue;
                 }
 
                 if (IsUsableTarget(adjustedAction, resolvedTarget, out var error))
                 {
+                    Services.PluginLog.Debug(
+                        "Redirect target accepted: actionId={ActionId}, target={Target}, resultName={ResultName}, gameObjectId={GameObjectId}",
+                        adjustedAction.RowId,
+                        targetName,
+                        resolvedTarget.Name.ToString(),
+                        resolvedTarget.GameObjectId
+                    );
                     result = ContinueOriginal(context, resolvedTarget.GameObjectId);
                     return true;
                 }
+
+                Services.PluginLog.Debug(
+                    "Redirect target rejected: actionId={ActionId}, target={Target}, resultName={ResultName}, gameObjectId={GameObjectId}, error={Error}, ignoreErrors={IgnoreErrors}",
+                    adjustedAction.RowId,
+                    targetName,
+                    resolvedTarget.Name.ToString(),
+                    resolvedTarget.GameObjectId,
+                    error,
+                    configuration.IgnoreErrors
+                );
 
                 if (!configuration.IgnoreErrors)
                 {
@@ -213,6 +315,11 @@ namespace RedirectSmarter.Hooks
 
             if (redirection.PreventDefault)
             {
+                Services.PluginLog.Debug(
+                    "Redirect prevented default: actionId={ActionId}, priorityCount={PriorityCount}",
+                    adjustedAction.RowId,
+                    redirection.Priority.Count
+                );
                 if (!configuration.IgnoreErrors)
                 {
                     ToastGui.ShowError(Loc.Text("Error.NoRedirectTarget"));
@@ -222,6 +329,10 @@ namespace RedirectSmarter.Hooks
                 return true;
             }
 
+            Services.PluginLog.Debug(
+                "Redirect falling back to original target: actionId={ActionId}",
+                adjustedAction.RowId
+            );
             result = ContinueOriginal(context);
             return true;
         }
@@ -239,6 +350,17 @@ namespace RedirectSmarter.Hooks
                 rangeOk && !typeOk
                     ? TargetValidationError.InvalidTarget
                     : TargetValidationErrors.FromActionStatus(rangeError);
+
+            Services.PluginLog.Debug(
+                "Redirect target validation: actionId={ActionId}, targetName={TargetName}, gameObjectId={GameObjectId}, rangeOk={RangeOk}, rangeError={RangeError}, typeOk={TypeOk}, error={Error}",
+                action.RowId,
+                target.Name.ToString(),
+                target.GameObjectId,
+                rangeOk,
+                rangeError,
+                typeOk,
+                error
+            );
 
             return rangeOk && typeOk;
         }
