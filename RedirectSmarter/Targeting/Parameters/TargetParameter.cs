@@ -1,6 +1,6 @@
 using System.Globalization;
 
-namespace RedirectSmarter.Targeting
+namespace RedirectSmarter.Targeting.Parameters
 {
     internal static class TargetParameter
     {

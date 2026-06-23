@@ -1,4 +1,6 @@
 using System.Collections.Generic;
+using RedirectSmarter.Targeting.Parameters;
+using RedirectSmarter.Targeting.Selectors;
 
 namespace RedirectSmarter.Targeting
 {

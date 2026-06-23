@@ -1,8 +1,9 @@
 using System;
 using Dalamud.Game.ClientState.Objects.Types;
 using FFXIVClientStructs.FFXIV.Client.UI.Misc;
+using RedirectSmarter.Targeting.Parameters;
 
-namespace RedirectSmarter.Targeting
+namespace RedirectSmarter.Targeting.Selectors
 {
     /// <summary>
     /// Resolves a native game placeholder, such as &lt;2&gt;, through the client's pronoun module.

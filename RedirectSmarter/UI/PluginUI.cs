@@ -12,6 +12,7 @@ using RedirectSmarter.Actions;
 using RedirectSmarter.Configuration;
 using RedirectSmarter.Localization;
 using RedirectSmarter.Targeting;
+using RedirectSmarter.Targeting.Parameters;
 using LuminaAction = Lumina.Excel.Sheets.Action;
 
 namespace RedirectSmarter.UI

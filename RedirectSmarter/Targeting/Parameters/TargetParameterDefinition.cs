@@ -1,7 +1,7 @@
 using System;
 using System.Globalization;
 
-namespace RedirectSmarter.Targeting
+namespace RedirectSmarter.Targeting.Parameters
 {
     internal sealed record TargetParameterDefinition(
         string Name,

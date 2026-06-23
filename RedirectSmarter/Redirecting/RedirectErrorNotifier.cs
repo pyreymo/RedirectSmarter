@@ -1,5 +1,5 @@
 using RedirectSmarter.Localization;
-using RedirectSmarter.Targeting;
+using RedirectSmarter.Targeting.Validation;
 
 namespace RedirectSmarter.Redirecting
 {

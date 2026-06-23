@@ -1,5 +1,7 @@
 using System.Collections.Generic;
 using Dalamud.Game.ClientState.Objects.Types;
+using RedirectSmarter.Targeting.MacroPlaceholders;
+using RedirectSmarter.Targeting.Parameters;
 
 namespace RedirectSmarter.Targeting
 {

@@ -1,4 +1,4 @@
-using RedirectSmarter.Targeting;
+using RedirectSmarter.Targeting.Parameters;
 
 namespace RedirectSmarter.Configuration
 {

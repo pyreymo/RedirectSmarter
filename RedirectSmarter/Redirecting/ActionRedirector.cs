@@ -1,6 +1,7 @@
 using RedirectSmarter.Actions;
 using RedirectSmarter.Configuration;
 using RedirectSmarter.Targeting;
+using RedirectSmarter.Targeting.Validation;
 using LuminaAction = Lumina.Excel.Sheets.Action;
 using UseActionMode = FFXIVClientStructs.FFXIV.Client.Game.ActionManager.UseActionMode;
 

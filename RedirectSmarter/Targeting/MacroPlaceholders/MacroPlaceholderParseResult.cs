@@ -1,4 +1,4 @@
-namespace RedirectSmarter.Targeting
+namespace RedirectSmarter.Targeting.MacroPlaceholders
 {
     internal enum MacroPlaceholderParseResult
     {

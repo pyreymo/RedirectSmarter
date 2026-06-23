@@ -1,4 +1,4 @@
-namespace RedirectSmarter.Targeting
+namespace RedirectSmarter.Targeting.Validation
 {
     /// <summary>
     /// Carries the result of target validation together with the failure reason when validation fails.

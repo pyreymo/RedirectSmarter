@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 
-namespace RedirectSmarter.Targeting
+namespace RedirectSmarter.Targeting.Parameters
 {
     internal sealed class TargetSelectionContext(IReadOnlyDictionary<string, string> parameters)
     {

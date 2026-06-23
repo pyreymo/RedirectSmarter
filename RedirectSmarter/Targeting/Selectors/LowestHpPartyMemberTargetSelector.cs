@@ -1,7 +1,8 @@
 using System.Collections.Generic;
 using Dalamud.Game.ClientState.Objects.Types;
+using RedirectSmarter.Targeting.Parameters;
 
-namespace RedirectSmarter.Targeting
+namespace RedirectSmarter.Targeting.Selectors
 {
     /// <summary>
     /// Selects the living party member with the lowest current HP percentage.

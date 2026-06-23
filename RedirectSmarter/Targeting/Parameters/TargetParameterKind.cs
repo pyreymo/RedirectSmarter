@@ -1,4 +1,4 @@
-namespace RedirectSmarter.Targeting
+namespace RedirectSmarter.Targeting.Parameters
 {
     internal enum TargetParameterKind
     {

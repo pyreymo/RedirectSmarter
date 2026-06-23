@@ -1,7 +1,8 @@
 using System;
 using System.Collections.Generic;
+using RedirectSmarter.Targeting.Parameters;
 
-namespace RedirectSmarter.Targeting
+namespace RedirectSmarter.Targeting.MacroPlaceholders
 {
     internal static class MacroPlaceholderTargetParser
     {

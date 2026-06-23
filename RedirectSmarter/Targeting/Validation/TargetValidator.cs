@@ -5,7 +5,7 @@ using FFXIVClientStructs.FFXIV.Client.Game;
 using ClientGameObject = FFXIVClientStructs.FFXIV.Client.Game.Object.GameObject;
 using LuminaAction = Lumina.Excel.Sheets.Action;
 
-namespace RedirectSmarter.Targeting
+namespace RedirectSmarter.Targeting.Validation
 {
     /// <summary>
     /// Validates whether an action can be redirected to a resolved target using the client's range, line-of-sight, and target-kind rules.
