@@ -1,33 +1,61 @@
+using System.Collections.Generic;
 using Dalamud.Game.ClientState.Objects.Types;
 
 namespace RedirectSmarter.Targeting
 {
     /// <summary>
-    /// Selects the living damaged party member with the lowest current HP percentage,
-    /// falling back to a damaged local player.
+    /// Selects the living party member with the lowest current HP percentage.
     /// </summary>
     internal sealed class LowestHpPartyMemberTargetSelector : IRedirectTargetSelector
     {
+        private const string BelowParameterName = "below";
+        private const string SelfParameterName = "self";
+        private const string BelowParameterDisplayNameKey = "RedirectTarget.LowestHpPartyMember.Parameter.Below";
+        private const string SelfParameterDisplayNameKey = "RedirectTarget.LowestHpPartyMember.Parameter.Self";
+        private const int DefaultBelowPercent = 100;
+        private const bool DefaultIncludeSelf = true;
         private const string LogPrefix = "[LowestHpSelector]";
 
-        public IGameObject? Resolve()
+        public static IReadOnlyList<TargetParameterDefinition> Parameters { get; } =
+        [
+            TargetParameter.Int(
+                BelowParameterName,
+                BelowParameterDisplayNameKey,
+                defaultValue: DefaultBelowPercent,
+                min: 1,
+                max: 100,
+                suffix: "%",
+                allowPositional: true
+            ),
+            TargetParameter.Bool(SelfParameterName, SelfParameterDisplayNameKey, defaultValue: DefaultIncludeSelf),
+        ];
+
+        public IGameObject? Resolve(TargetSelectionContext context)
         {
+            var belowHpRatio = context.GetInt(BelowParameterName, DefaultBelowPercent) / 100.0;
+            var includeSelf = context.GetBool(SelfParameterName, DefaultIncludeSelf);
+            var localPlayer = Services.ObjectTable.LocalPlayer;
             IGameObject? lowestHpMember = null;
             var lowestHpPercent = double.MaxValue;
             var inspectedPartyMembers = 0;
-            var validDamagedPartyMembers = 0;
+            var eligiblePartyMembers = 0;
 
             foreach (var partyMember in Services.PartyList)
             {
                 inspectedPartyMembers++;
 
                 var gameObject = partyMember.GameObject;
-                if (!TryGetDamagedAliveTarget(gameObject, partyMember.CurrentHP, partyMember.MaxHP, out var hpPercent, out _))
+                if (!includeSelf && IsSameObject(gameObject, localPlayer))
                 {
                     continue;
                 }
 
-                validDamagedPartyMembers++;
+                if (!TryGetDamagedAliveTarget(gameObject, partyMember.CurrentHP, partyMember.MaxHP, belowHpRatio, out var hpPercent, out _))
+                {
+                    continue;
+                }
+
+                eligiblePartyMembers++;
 
                 if (hpPercent >= lowestHpPercent)
                     continue;
@@ -39,30 +67,46 @@ namespace RedirectSmarter.Targeting
             if (lowestHpMember is not null)
             {
                 Services.PluginLog.Debug(
-                    "{Prefix} selected party member: {Object}, hpPercent={HpPercent:P2}, inspected={Inspected}, damaged={Damaged}",
+                    "{Prefix} selected party member: {Object}, hpPercent={HpPercent:P2}, below={Below:P2}, self={Self}, inspected={Inspected}, eligible={Eligible}",
                     LogPrefix,
                     DescribeObject(lowestHpMember),
                     lowestHpPercent,
+                    belowHpRatio,
+                    includeSelf,
                     inspectedPartyMembers,
-                    validDamagedPartyMembers
+                    eligiblePartyMembers
                 );
 
                 return lowestHpMember;
             }
 
+            if (!includeSelf)
+            {
+                Services.PluginLog.Debug(
+                    "{Prefix} no eligible party member found: inspected={Inspected}, eligible={Eligible}, below={Below:P2}; self disabled",
+                    LogPrefix,
+                    inspectedPartyMembers,
+                    eligiblePartyMembers,
+                    belowHpRatio
+                );
+
+                return null;
+            }
+
             Services.PluginLog.Debug(
-                "{Prefix} no damaged party member found: inspected={Inspected}, damaged={Damaged}; trying local player fallback",
+                "{Prefix} no eligible party member found: inspected={Inspected}, eligible={Eligible}, below={Below:P2}; trying local player fallback",
                 LogPrefix,
                 inspectedPartyMembers,
-                validDamagedPartyMembers
+                eligiblePartyMembers,
+                belowHpRatio
             );
 
-            var localPlayer = Services.ObjectTable.LocalPlayer;
             if (
                 !TryGetDamagedAliveTarget(
                     localPlayer,
                     localPlayer?.CurrentHp ?? 0,
                     localPlayer?.MaxHp ?? 0,
+                    belowHpRatio,
                     out var localHpPercent,
                     out var fallbackFailReason
                 )
@@ -79,10 +123,11 @@ namespace RedirectSmarter.Targeting
             }
 
             Services.PluginLog.Debug(
-                "{Prefix} selected local player: {Object}, hpPercent={HpPercent:P2}",
+                "{Prefix} selected local player: {Object}, hpPercent={HpPercent:P2}, below={Below:P2}",
                 LogPrefix,
                 DescribeObject(localPlayer),
-                localHpPercent
+                localHpPercent,
+                belowHpRatio
             );
 
             return localPlayer;
@@ -92,6 +137,7 @@ namespace RedirectSmarter.Targeting
             IGameObject? gameObject,
             ulong currentHp,
             ulong maxHp,
+            double belowHpRatio,
             out double hpPercent,
             out string failReason
         )
@@ -130,7 +176,21 @@ namespace RedirectSmarter.Targeting
             }
 
             hpPercent = (double)currentHp / maxHp;
+            if (hpPercent >= belowHpRatio)
+            {
+                failReason = $"hpPercent {hpPercent:P2} is not below {belowHpRatio:P2}";
+                return false;
+            }
+
             return true;
+        }
+
+        private static bool IsSameObject(IGameObject? first, IGameObject? second)
+        {
+            if (first is null || second is null)
+                return false;
+
+            return first.GameObjectId == second.GameObjectId || first.Address == second.Address;
         }
 
         private static string DescribeObject(IGameObject? gameObject)

@@ -1,3 +1,5 @@
+using RedirectSmarter.Targeting;
+
 namespace RedirectSmarter.Configuration
 {
     internal sealed class RedirectionEditor(PluginConfiguration configuration)
@@ -43,7 +45,29 @@ namespace RedirectSmarter.Configuration
                 return false;
             }
 
-            redirection[index] = target;
+            redirection.SetTarget(index, target);
+            return true;
+        }
+
+        public static bool SetTargetParameter(Redirection redirection, int index, TargetParameterDefinition definition, string value)
+        {
+            if (!IsValidIndex(redirection, index))
+            {
+                return false;
+            }
+
+            if (!definition.TryNormalize(value, out var normalizedValue))
+            {
+                return false;
+            }
+
+            var parameters = redirection.GetTargetOptions(index).Parameters;
+            if (parameters.TryGetValue(definition.Name, out var currentValue) && currentValue == normalizedValue)
+            {
+                return false;
+            }
+
+            parameters[definition.Name] = normalizedValue;
             return true;
         }
 
@@ -67,6 +91,11 @@ namespace RedirectSmarter.Configuration
             }
 
             configuration.Redirections.Remove(actionId);
+        }
+
+        private static bool IsValidIndex(Redirection redirection, int index)
+        {
+            return index >= 0 && index < redirection.Count;
         }
     }
 }

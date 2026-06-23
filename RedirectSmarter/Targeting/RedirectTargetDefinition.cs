@@ -1,3 +1,5 @@
+using System.Collections.Generic;
+
 namespace RedirectSmarter.Targeting
 {
     /// <summary>
@@ -7,6 +9,10 @@ namespace RedirectSmarter.Targeting
         string Id,
         string DisplayNameKey,
         IRedirectTargetSelector Selector,
-        string? MacroPlaceholder = null
-    );
+        string? MacroPlaceholder = null,
+        IReadOnlyList<TargetParameterDefinition>? Parameters = null
+    )
+    {
+        public IReadOnlyList<TargetParameterDefinition> Parameters { get; init; } = Parameters ?? [];
+    }
 }

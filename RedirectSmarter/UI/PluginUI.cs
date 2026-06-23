@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using System.Numerics;
 using Dalamud.Bindings.ImGui;
@@ -20,6 +21,7 @@ namespace RedirectSmarter.UI
         private const float IconSize = 32f;
         private const float JobListWidth = 140f;
         private const float RedirectComboWidth = 135f;
+        private const float IntParameterWidth = 54f;
         private const string WindowId = "RedirectSmarter.Main";
 
         private PluginConfiguration Configuration { get; }
@@ -345,6 +347,8 @@ namespace RedirectSmarter.UI
                     ImGui.EndCombo();
                 }
 
+                save |= DrawTargetOptions(action.RowId, redirection, i);
+
                 ImGui.SameLine();
                 ImGui.PushFont(UiBuilder.IconFont);
                 if (ImGui.Button($"{FontAwesomeIcon.Trash.ToIconString()}##remove-{action.RowId}-{i}"))
@@ -361,6 +365,111 @@ namespace RedirectSmarter.UI
             }
 
             return save;
+        }
+
+        private bool DrawTargetOptions(uint actionId, Redirection redirection, int index)
+        {
+            if (!TargetCatalog.TryGetDefinition(redirection[index], out var definition) || definition.Parameters.Count == 0)
+            {
+                return false;
+            }
+
+            var save = false;
+            var options = redirection.GetTargetOptions(index);
+            foreach (var parameter in definition.Parameters)
+            {
+                save |= DrawTargetParameter(actionId, redirection, index, options, parameter);
+            }
+
+            return save;
+        }
+
+        private static bool DrawTargetParameter(
+            uint actionId,
+            Redirection redirection,
+            int index,
+            RedirectionTargetOptions options,
+            TargetParameterDefinition parameter
+        )
+        {
+            return parameter.Kind switch
+            {
+                TargetParameterKind.Int => DrawIntTargetParameter(actionId, redirection, index, options, parameter),
+                TargetParameterKind.Bool => DrawBoolTargetParameter(actionId, redirection, index, options, parameter),
+                _ => false,
+            };
+        }
+
+        private static bool DrawIntTargetParameter(
+            uint actionId,
+            Redirection redirection,
+            int index,
+            RedirectionTargetOptions options,
+            TargetParameterDefinition parameter
+        )
+        {
+            ImGui.SameLine();
+            ImGui.AlignTextToFramePadding();
+            ImGui.TextUnformatted(Loc.Text(parameter.DisplayNameKey));
+
+            ImGui.SameLine();
+            ImGui.SetNextItemWidth(IntParameterWidth);
+            var value = GetIntParameterValue(options, parameter);
+            if (ImGui.InputInt($"##target-param-{actionId}-{index}-{parameter.Name}", ref value, 0, 0))
+            {
+                return RedirectionEditor.SetTargetParameter(redirection, index, parameter, value.ToString(CultureInfo.InvariantCulture));
+            }
+
+            if (parameter.Suffix is not null)
+            {
+                ImGui.SameLine();
+                ImGui.AlignTextToFramePadding();
+                ImGui.TextUnformatted(parameter.Suffix);
+            }
+
+            return false;
+        }
+
+        private static bool DrawBoolTargetParameter(
+            uint actionId,
+            Redirection redirection,
+            int index,
+            RedirectionTargetOptions options,
+            TargetParameterDefinition parameter
+        )
+        {
+            ImGui.SameLine();
+            var value = GetBoolParameterValue(options, parameter);
+            if (ImGui.Checkbox($"{Loc.Text(parameter.DisplayNameKey)}##target-param-{actionId}-{index}-{parameter.Name}", ref value))
+            {
+                return RedirectionEditor.SetTargetParameter(redirection, index, parameter, value.ToString().ToLowerInvariant());
+            }
+
+            return false;
+        }
+
+        private static int GetIntParameterValue(RedirectionTargetOptions options, TargetParameterDefinition parameter)
+        {
+            var value = options.Parameters.TryGetValue(parameter.Name, out var configuredValue) ? configuredValue : parameter.DefaultValue;
+
+            if (!parameter.TryNormalize(value, out var normalizedValue))
+            {
+                normalizedValue = parameter.DefaultValue;
+            }
+
+            return int.Parse(normalizedValue, CultureInfo.InvariantCulture);
+        }
+
+        private static bool GetBoolParameterValue(RedirectionTargetOptions options, TargetParameterDefinition parameter)
+        {
+            var value = options.Parameters.TryGetValue(parameter.Name, out var configuredValue) ? configuredValue : parameter.DefaultValue;
+
+            if (!parameter.TryNormalize(value, out var normalizedValue))
+            {
+                normalizedValue = parameter.DefaultValue;
+            }
+
+            return bool.Parse(normalizedValue);
         }
 
         private static void DrawIcon(ushort id, Vector2 size = default)

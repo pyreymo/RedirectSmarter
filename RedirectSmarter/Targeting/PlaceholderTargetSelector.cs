@@ -9,7 +9,7 @@ namespace RedirectSmarter.Targeting
     /// </summary>
     internal sealed class PlaceholderTargetSelector(string placeholder) : IRedirectTargetSelector
     {
-        public unsafe IGameObject? Resolve()
+        public unsafe IGameObject? Resolve(TargetSelectionContext context)
         {
             try
             {

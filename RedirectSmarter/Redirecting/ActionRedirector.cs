@@ -26,9 +26,10 @@ namespace RedirectSmarter.Redirecting
 
         private RedirectResult ResolveConfiguredTarget(LuminaAction adjustedAction, Redirection redirection)
         {
-            foreach (var targetName in redirection.Priority)
+            for (var i = 0; i < redirection.Count; i++)
             {
-                var resolvedTarget = targetResolver.Resolve(targetName);
+                var targetName = redirection[i];
+                var resolvedTarget = targetResolver.Resolve(targetName, redirection.GetTargetOptions(i).Parameters);
                 if (resolvedTarget is null)
                 {
                     continue;

@@ -28,10 +28,16 @@ namespace RedirectSmarter.Configuration
 
             foreach (var (actionId, redirection) in Redirections.ToList())
             {
-                var removed = redirection.Priority.RemoveAll(target => !validTargets.Contains(target));
+                redirection.NormalizeTargetOptions();
 
-                if (removed > 0)
+                for (var i = redirection.Count - 1; i >= 0; i--)
                 {
+                    if (validTargets.Contains(redirection[i]))
+                    {
+                        continue;
+                    }
+
+                    redirection.RemoveAt(i);
                     changed = true;
                 }
 

@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using Dalamud.Game.ClientState.Objects.Types;
 
 namespace RedirectSmarter.Targeting
@@ -7,24 +8,37 @@ namespace RedirectSmarter.Targeting
     /// </summary>
     internal sealed class TargetResolver(RedirectTargetCatalog catalog)
     {
-        public IGameObject? Resolve(string target)
+        public IGameObject? Resolve(string target) => Resolve(target, null);
+
+        public IGameObject? Resolve(string target, IReadOnlyDictionary<string, string>? parameters)
         {
-            if (!catalog.TryGetSelector(target, out var selector))
+            if (!catalog.TryGetDefinition(target, out var definition))
             {
                 return null;
             }
 
-            return selector.Resolve();
+            return definition.Selector.Resolve(TargetSelectionContext.From(definition.Parameters, parameters));
         }
 
         public IGameObject? ResolveMacroPlaceholder(string placeholder)
         {
+            var parseResult = MacroPlaceholderTargetParser.Parse(placeholder, catalog, out var targetId, out var parameters);
+            if (parseResult == MacroPlaceholderParseResult.Parsed)
+            {
+                return Resolve(targetId, parameters);
+            }
+
+            if (parseResult == MacroPlaceholderParseResult.Invalid)
+            {
+                return null;
+            }
+
             if (!catalog.TryGetMacroPlaceholderSelector(placeholder, out var selector))
             {
                 return null;
             }
 
-            return selector.Resolve();
+            return selector.Resolve(TargetSelectionContext.Empty);
         }
     }
 }

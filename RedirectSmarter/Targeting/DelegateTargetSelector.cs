@@ -8,6 +8,6 @@ namespace RedirectSmarter.Targeting
     /// </summary>
     internal sealed class DelegateTargetSelector(Func<IGameObject?> resolve) : IRedirectTargetSelector
     {
-        public IGameObject? Resolve() => resolve();
+        public IGameObject? Resolve(TargetSelectionContext context) => resolve();
     }
 }

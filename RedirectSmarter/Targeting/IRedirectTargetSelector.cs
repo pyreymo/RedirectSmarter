@@ -7,6 +7,6 @@ namespace RedirectSmarter.Targeting
     /// </summary>
     internal interface IRedirectTargetSelector
     {
-        IGameObject? Resolve();
+        IGameObject? Resolve(TargetSelectionContext context);
     }
 }

@@ -22,6 +22,8 @@
   "Table.Add": "添加",
   "Table.PreventDefault": "阻止默认",
   "Table.RedirectPriority": "重定向优先级",
+  "RedirectTarget.LowestHpPartyMember.Parameter.Below": "HP <",
+  "RedirectTarget.LowestHpPartyMember.Parameter.Self": "自己",
   "Redirect.None": "没有重定向",
   "RedirectTarget.Target": "目标",
   "RedirectTarget.Focus": "焦点目标",

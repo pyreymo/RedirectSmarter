@@ -22,7 +22,7 @@ namespace RedirectSmarter.Targeting
             definitionsById = definitions.ToDictionary(definition => definition.Id);
             definitionsByMacroPlaceholder = definitions
                 .Where(definition => definition.MacroPlaceholder is not null)
-                .ToDictionary(definition => definition.MacroPlaceholder!, definition => definition);
+                .ToDictionary(definition => NormalizeMacroPlaceholder(definition.MacroPlaceholder!), definition => definition);
             displayNameKeys = definitions.ToDictionary(definition => definition.Id, definition => definition.DisplayNameKey);
             ValidTargets = new HashSet<string>(definitionsById.Keys);
         }
@@ -42,9 +42,14 @@ namespace RedirectSmarter.Targeting
             return false;
         }
 
+        public bool TryGetDefinition(string target, out RedirectTargetDefinition definition)
+        {
+            return definitionsById.TryGetValue(target, out definition!);
+        }
+
         public bool TryGetMacroPlaceholderSelector(string placeholder, out IRedirectTargetSelector selector)
         {
-            if (definitionsByMacroPlaceholder.TryGetValue(placeholder, out var definition))
+            if (TryGetMacroPlaceholderDefinition(placeholder, out var definition))
             {
                 selector = definition.Selector;
                 return true;
@@ -52,6 +57,11 @@ namespace RedirectSmarter.Targeting
 
             selector = null!;
             return false;
+        }
+
+        public bool TryGetMacroPlaceholderDefinition(string placeholder, out RedirectTargetDefinition definition)
+        {
+            return definitionsByMacroPlaceholder.TryGetValue(NormalizeMacroPlaceholder(placeholder), out definition!);
         }
 
         public string DisplayName(string target)
@@ -85,8 +95,20 @@ namespace RedirectSmarter.Targeting
                     RedirectTargets.LowestHpPartyMember,
                     "RedirectTarget.LowestHpPartyMember",
                     new LowestHpPartyMemberTargetSelector(),
-                    RedirectTargets.LowestHpPartyMemberPlaceholder
+                    RedirectTargets.LowestHpPartyMemberPlaceholder,
+                    LowestHpPartyMemberTargetSelector.Parameters
                 ),
             ];
+
+        private static string NormalizeMacroPlaceholder(string placeholder)
+        {
+            var normalized = placeholder.Trim();
+            if (normalized.Length >= 2 && normalized[0] == '<' && normalized[^1] == '>')
+            {
+                normalized = normalized[1..^1];
+            }
+
+            return normalized;
+        }
     }
 }

@@ -80,13 +80,22 @@ The following explicit target options are currently supported:
 - `Self`: The player.
 - `Soft Target`: Your current soft target.
 - `<2>` through `<8>`: Party member 2-8.
-- `Lowest HP Party Member`: The living party member with the lowest HP percentage, only if that member is not at full HP. If everyone is full HP, this selector returns no target.
+- `Lowest HP Party Member`: The living party member with the lowest HP percentage, only if that member is below the configured HP threshold. If no target qualifies, this selector returns no target unless its self option can select the damaged local player.
 
 ## Custom Macro Placeholders
 
 `Lowest HP Party Member` is also registered as the custom placeholder `<lowhp>`.
+`<lowhp>` is equivalent to `<lowhp:100>` and only chooses targets below full HP.
 
-Custom placeholder support is experimental and only applies to game paths that call the placeholder resolver directly. For action redirection, prefer choosing `Lowest HP Party Member` from the Redirect Smarter target list.
+The placeholder also supports a small parameter syntax:
+
+- `<lowhp:80>`: Shorthand for `<lowhp:below=80>`.
+- `<lowhp:below=80>`: Only chooses targets below 80% HP.
+- `<lowhp:80:self=false>`: Only chooses targets below 80% HP and does not target the local player.
+
+Only the first HP threshold may be positional. Use named arguments for anything else; `<lowhp:80:false>` is intentionally not supported.
+
+Custom placeholder support is experimental and only applies to game paths that call the placeholder resolver directly. For action redirection, prefer choosing `Lowest HP Party Member` from the Redirect Smarter target list, where the same threshold and self-target behavior can be configured in the main UI.
 
 ## Macro Queueing
 
@@ -121,8 +130,9 @@ The current code is split around those boundaries:
 
 - `ActionCatalog` builds the list of configurable actions.
 - `ActionExtensions` owns action capability helpers and action allowlist checks.
-- `RedirectTargetCatalog` defines available targets, display names, legal persisted target ids, and custom macro placeholders.
-- `TargetResolver` maps target ids and custom macro placeholders to target selectors.
+- `RedirectTargetCatalog` defines available targets, display names, legal persisted target ids, custom macro placeholders, and target-specific parameter schemas.
+- `TargetResolver` maps target ids and custom macro placeholders to target selectors, passing target parameters through a shared selection context.
+- Target selectors with options should expose parameter schemas with `TargetParameter.Int` / `TargetParameter.Bool`, then read values from `TargetSelectionContext`.
 - `TargetValidator` owns target type, range, and line-of-sight validation.
 - `ActionRedirector` owns configured target priority application and prevent-default behavior.
 - `GameHooks` owns the action-use hook, macro-origin normalization, and original action invocation.
