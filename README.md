@@ -130,10 +130,13 @@ The current code is split around those boundaries:
 
 - `ActionCatalog` builds the list of configurable actions.
 - `ActionExtensions` owns action capability helpers and action allowlist checks.
+- `Targeting/Selectors` contains concrete target-selection strategies and the selector interface.
+- `Targeting/Parameters` contains the shared parameter schema and runtime selection context.
+- `Targeting/MacroPlaceholders` parses custom placeholder arguments into the same parameter shape used by the UI.
+- `Targeting/Validation` owns target type, range, and line-of-sight validation.
 - `RedirectTargetCatalog` defines available targets, display names, legal persisted target ids, custom macro placeholders, and target-specific parameter schemas.
 - `TargetResolver` maps target ids and custom macro placeholders to target selectors, passing target parameters through a shared selection context.
 - Target selectors with options should expose parameter schemas with `TargetParameter.Int` / `TargetParameter.Bool`, then read values from `TargetSelectionContext`.
-- `TargetValidator` owns target type, range, and line-of-sight validation.
 - `ActionRedirector` owns configured target priority application and prevent-default behavior.
 - `GameHooks` owns the action-use hook, macro-origin normalization, and original action invocation.
 - `MacroPlaceholderHook` owns custom placeholder resolution.
