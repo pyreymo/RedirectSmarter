@@ -17,5 +17,10 @@ namespace RedirectSmarter.Configuration
         {
             Parameters.Clear();
         }
+
+        internal RedirectionTargetOptions Clone()
+        {
+            return new RedirectionTargetOptions { Parameters = new Dictionary<string, string>(Parameters) };
+        }
     }
 }

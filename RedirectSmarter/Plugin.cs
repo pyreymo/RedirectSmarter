@@ -111,7 +111,7 @@ namespace RedirectSmarter
                 return;
             }
 
-            PluginUi.Toggle();
+            PluginUi.ToggleMain();
         }
 
         private void ToggleRedirects()
@@ -141,7 +141,7 @@ namespace RedirectSmarter
 
         private void OpenMainUi()
         {
-            PluginUi.Toggle();
+            PluginUi.ToggleMain();
         }
 
         private void OpenConfigUi()

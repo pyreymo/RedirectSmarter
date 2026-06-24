@@ -23,6 +23,19 @@ namespace RedirectSmarter.Actions
 
         public IEnumerable<Action> GetRoleActions() => initialized ? roleActions : [];
 
+        public IEnumerable<Action> GetAllActions()
+        {
+            if (!initialized)
+            {
+                return [];
+            }
+
+            return roleActions
+                .Concat(jobActions.Values.SelectMany(actions => actions))
+                .GroupBy(action => action.RowId)
+                .Select(group => group.First());
+        }
+
         public Action GetRow(uint id) => actionSheet.GetRow(id);
 
         public ActionCatalog()

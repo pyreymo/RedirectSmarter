@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using Newtonsoft.Json;
 
 namespace RedirectSmarter.Configuration
@@ -72,6 +73,19 @@ namespace RedirectSmarter.Configuration
         {
             NormalizeTargetOptions();
             return TargetOptions[i];
+        }
+
+        public Redirection Clone(uint id)
+        {
+            NormalizeTargetOptions();
+
+            return new Redirection
+            {
+                ID = id,
+                Priority = [.. Priority],
+                TargetOptions = [.. TargetOptions.Select(options => options.Clone())],
+                PreventDefault = PreventDefault,
+            };
         }
 
         public void NormalizeTargetOptions()

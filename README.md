@@ -9,8 +9,11 @@
 </p>
 
 <p align="center">
+  <img src="https://img.shields.io/badge/status-early%20testing-orange" alt="Early testing">
   <img src="https://img.shields.io/badge/Dalamud%20API-15-blue" alt="Dalamud API 15">
 </p>
+
+<p align="center"> <strong>This plugin is not published yet and may change frequently.</strong> </p>
 
 ## Overview
 
@@ -43,7 +46,9 @@ Redirect Smarter does not currently provide:
 
 ## Installation
 
-This plugin is currently available through the Dalamud plugin installer.
+Redirect Smarter is not currently available from a public plugin repository.
+
+For now, test builds are distributed manually.
 
 ## Command
 
